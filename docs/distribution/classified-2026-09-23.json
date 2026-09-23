@@ -1,0 +1,960 @@
+[
+ {
+  "address": "0x0bcf9c69c930ff32a372f8d66c3466dc87bc59cb",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0a1187b46f6cf98a11811d60f891f56e3e5dbf6a",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 810
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 810,
+  "mean": 810
+ },
+ {
+  "address": "0x0c0874ac3db3c03d07d4e2525608dea23415a4e0",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x03039922d6e8fd0728d0027c40f3de59a121f7e7",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 759
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 759,
+  "mean": 759
+ },
+ {
+  "address": "0x00cd72128e6ceaf8076bf25398e1d3cd02fa6486",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0458528cd774c21c16edc8f11c6dd87bb87948e1",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00068c8cb77e6eed45d274f5c51a0461a8cfdbbd",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x047b3e73043bbf7421b78893110fc30b7db6b126",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x009017192bbdb9152f233953bdf35860cdc9b2fb",
+  "state": "SCORED",
+  "borrowed": [
+   "arbitrum",
+   "polygon"
+  ],
+  "scores": {
+   "arbitrum": 850,
+   "polygon": 599
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 599,
+  "mean": 724.5
+ },
+ {
+  "address": "0x05cd35a430949c1bf475e17b67c4167ebdd3f04b",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 729
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 729,
+  "mean": 729
+ },
+ {
+  "address": "0x092ad005d2a0e9706754d1c93c2c4339145b24f8",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x04bd950f42f6e77a394e2dbde19192f478efa5e4",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0049c977aaf22e0db89b2755482c7e49ee2dc2dd",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x007ebcddc84346e93e38ef2c275b3df4e7980379",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0a911d1ca158b7563a8671fe02fa591170c7778d",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x07e782619a09db56e905b335d81c8ecd454fa408",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x03df81766f4c52902dbd00a407455c0c853693d2",
+  "state": "INSUFFICIENT_HISTORY*",
+  "borrowed": [],
+  "scores": {},
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": null,
+  "mean": null
+ },
+ {
+  "address": "0x09f8b3c1831ff409d9ab5035aa08a5e2cd2e13e1",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0380938b32b68fe5d7fc5f93b3c4b783ac0e48c0",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0a9dfa18fd8fe6a0aa3ee6dedf0a9de05f167f07",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00762c63b336c0145b6d3f2a6063b281273de0c1",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x049ed22fd0bee3edcfa5ff23630e8b12d6619538",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x079b9700296d82b54be621a6e11142a862017ff1",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x01c77b5674c4607e8e6c4e94bec43536fb31cd20",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x013c31dc02e31cde45e71e2ab9f35b33086f77c7",
+  "state": "INSUFFICIENT_HISTORY*",
+  "borrowed": [],
+  "scores": {},
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": null,
+  "mean": null
+ },
+ {
+  "address": "0x0527ff8a33cf099a8e86fbf2171f37c06dcf36c2",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 749
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 749,
+  "mean": 749
+ },
+ {
+  "address": "0x04ce8a23fde59ef0b35bc1805dc0e465cf03c874",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00d7eccf081f45bc8add65f1a90d70591c79afa8",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum",
+   "arbitrum"
+  ],
+  "scores": {
+   "ethereum": 850,
+   "arbitrum": 757
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 757,
+  "mean": 803.5
+ },
+ {
+  "address": "0x057518153ed7f25dd237a0d0052ae8cc5c428ee3",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x09f2e285b2e74a671e42d8e63faee0c62c8f5bef",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum",
+   "polygon"
+  ],
+  "scores": {
+   "ethereum": 850,
+   "polygon": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x01b13c5fb9ffacf4b9fce3cb24c58fa254f37074",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 757
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 757,
+  "mean": 757
+ },
+ {
+  "address": "0x033bd44b29375c02d07d8313a90eaae94337dcbf",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x01658d59c9f46226b937784f1eb1b075add855c6",
+  "state": "SCORED",
+  "borrowed": [
+   "arbitrum"
+  ],
+  "scores": {
+   "arbitrum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0263e43c0de253a0fe354b60d35d2855c514a887",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum",
+   "arbitrum"
+  ],
+  "scores": {
+   "ethereum": 850,
+   "arbitrum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0222ba0731fa7f3c3652180a6fecef7075b632ad",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x028d49cfc1ef0f86fe6ac9e728cb898cb54ae792",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00c92eb397fc58747d3327a5c71ee7712fadb6a6",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 694
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 694,
+  "mean": 694
+ },
+ {
+  "address": "0x034671c3234d528497365fb90bcddad33beeead5",
+  "state": "INSUFFICIENT_HISTORY*",
+  "borrowed": [],
+  "scores": {},
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": null,
+  "mean": null
+ },
+ {
+  "address": "0x08bb933f6560d28c23e14523b93c8544ad6a92fd",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x03123a477a419e27603741ad7e5160f6120490d3",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 772
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 772,
+  "mean": 772
+ },
+ {
+  "address": "0x007c406b296f28db8cb6c4ec5bd30a56f47666e4",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00ec4b050ce9e574db9be09eb5ef287f1868deee",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x00f282c40b92bed05f1776cadf1c8b96b9fbaee3",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x037959975b3c654b388dab90ca58d1a483bb8f8b",
+  "state": "SCORED",
+  "borrowed": [
+   "arbitrum"
+  ],
+  "scores": {
+   "arbitrum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x028f2b48831793268e1e6365d52bcc2de63b41e4",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0434b46af05cc1e0ba5e94a63b1157b1e8350409",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 754
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ],
+   [
+    "avalanche",
+    "http 0"
+   ]
+  ],
+  "min": 754,
+  "mean": 754
+ },
+ {
+  "address": "0x01b26170ebf7b5890c5bc64355c1ae194f3a86c5",
+  "state": "INSUFFICIENT_HISTORY*",
+  "borrowed": [],
+  "scores": {},
+  "fails": [],
+  "unknown": [
+   [
+    "ethereum",
+    "http 0"
+   ],
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": null,
+  "mean": null
+ },
+ {
+  "address": "0x0208e1bed93642d64e98dfc68df634d7ecb8a38c",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 576
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "optimism",
+    "http 0"
+   ],
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 576,
+  "mean": 576
+ },
+ {
+  "address": "0x0085d428ac99c42b30cb38373b1c233846891c9a",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ },
+ {
+  "address": "0x0291194e076d8dc97d8b6e0820a9b9cd4d8284ad",
+  "state": "SCORED",
+  "borrowed": [
+   "ethereum"
+  ],
+  "scores": {
+   "ethereum": 850
+  },
+  "fails": [],
+  "unknown": [
+   [
+    "base",
+    "lending source degraded: borrowing unknowable"
+   ],
+   [
+    "avalanche",
+    "http 0"
+   ]
+  ],
+  "min": 850,
+  "mean": 850
+ }
+]

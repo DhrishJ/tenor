@@ -134,3 +134,20 @@ local Monad-mode anvil; then Phase 2.
 
 **Next**: Phase 3 after approval. Before Phase 4: resolve HyperSync
 reachability and run the distribution check.
+
+## 2026-09-23 (Wed), early: Phase 3 objections and the distribution check
+
+- The gate claim "tier cap implemented" is false (P3-O1). Wrote objections
+  P3-O1 to P3-O16 and BOUNTIES.md.
+- **Distribution check (ChainScore-only discovery; HyperSync still down):**
+  46 of 50 SCORED. Tiers: A 36, B 8, C 1, D 1, FLOOR 0. Only 4 multi-chain
+  wallets. Details in `docs/distribution/`.
+- **Found:** ChainScore silently answers Scroll requests with Ethereum data
+  (P3-O15). Base lending data is unobservable at ChainScore.
+- **ChainScore usage:** 350 legacy calls for the distribution check (about
+  368 total to date). Legacy has no monthly quota; paced at about 13/min
+  after back-off made the unpaced run crawl at 2/min.
+- **HyperSync:** still rejecting TLS at last check (since about 22:10 on
+  09-22).
+- **Blocked on you:** objection approvals, the tier-cap rule, an Alchemy key,
+  faucet funding (P3-O12), and the portal bounty terms (P3-O14).

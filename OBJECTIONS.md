@@ -1086,3 +1086,47 @@ It will be rerun through the real pipeline once HyperSync is back.
    because ChainScore's Aave source is also degraded on Base, so we can't tell
    whether those wallets borrowed there. The real pipeline, with independent
    history, resolves this.
+
+## P3-O15. (Found by the distribution check) ChainScore cannot score Scroll and silently answers with Ethereum
+
+**Evidence:** `docs/distribution/README.md`, finding 1. In 48 of 48 wallets,
+`?chain=scroll` equals `?chain=ethereum` field for field (including
+Compound). ChainScore's `chainSlugSchema` has no `scroll`, and the legacy
+route falls back to `'ethereum'`.
+
+**Impact on the Phase 2 service:** `COVERED_CHAINS` includes Scroll. For a
+wallet that really borrowed on Scroll, the service would have counted its
+*Ethereum* score as its Scroll score. That's a silent mis-score that none of
+the current checks catch, because the legacy response doesn't echo the
+chain.
+
+**Instead** (a service change, after approval):
+1. ChainScore is only ever called with slugs from its accepted list (pinned
+   from commit a519058). The service's coverage table gains a
+   `chainscoreScoreable` flag: Scroll = false.
+2. The independent check still looks at Scroll. If borrowing is found there,
+   the result is **UNAVAILABLE** ("Scroll: ChainScore does not score
+   Scroll"). Excluding the chain instead would let a Scroll liquidation hide
+   from the minimum.
+3. A test asserts no request is ever built with a slug outside the list.
+
+## P3-O16. The distribution isn't floor-collapsed; it's top-heavy, and multi-chain wallets are rare
+
+**Evidence:** `docs/distribution/README.md`, finding 2. 36 of 46 are tier A
+(78%); no wallet is FLOOR. Only 4 are genuinely multi-chain.
+
+**What it means:**
+- **The comparison screen is viable** (§1's stop condition isn't met).
+  "Tier A vs unscored" is the *typical* case for a real borrower, not a
+  cherry-picked one.
+- **The middle tiers are thin in practice** (B 8, C 1, D 1). A judge asking
+  "what do the middle tiers do" gets an honest answer: in this sample, most
+  real borrowers score A, and B–D come from weaker histories or a bad chain
+  under the minimum (2 of the 4 multi-chain wallets dropped a tier because
+  of it).
+- **The pile-up at 850** (the score band's ceiling) suggests ChainScore
+  separates weakly among good borrowers. That's a property of the prior art,
+  stated as an observation, not a metric.
+- **The ≥ 20 multi-chain requirement can't be met from this sample.** Getting
+  there needs HyperSync-based discovery (wallets with Aave `Borrow` logs on 2
+  or more chains). It's queued for when HyperSync returns.
