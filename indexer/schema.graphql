@@ -1,0 +1,104 @@
+# Tenor indexer: HISTORY and AGGREGATES only. Current state (debt with
+# accrued interest, health factor, maxBorrow, score freshness) is read from
+# the chain by the frontend, never from here (OBJECTIONS P3-O4).
+
+type Wallet {
+  id: ID! # lowercase address
+  attestationCount: Int!
+  latestScore: Int # last score submitted on-chain (may since be stale)
+  latestScoreIssuedAt: BigInt
+  latestScoreExpiresAt: BigInt
+  borrowCount: Int!
+  liquidationCount: Int!
+  shortfallCount: Int!
+  totalShortfall: BigInt!
+  lastLiquidatedAt: BigInt
+  attestations: [Attestation!]! @derivedFrom(field: "wallet")
+  events: [WalletEvent!]! @derivedFrom(field: "wallet")
+  liquidations: [LiquidationEvent!]! @derivedFrom(field: "wallet")
+}
+
+type Attestation {
+  id: ID! # txHash-logIndex
+  wallet: Wallet!
+  score: Int! # the Tenor score as signed (ChainScore score plus Tenor policy)
+  tier: String! # derived from score, same boundaries as RiskParams
+  issuedAt: BigInt!
+  expiresAt: BigInt!
+  nonce: BigInt!
+  modelVersion: String!
+  attestorEpoch: Int!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  txHash: String!
+}
+
+# One row per wallet-level event, in order: the feedback loop as a timeline
+# (attested -> borrowed -> liquidated -> score invalidated -> re-attested).
+type WalletEvent {
+  id: ID! # txHash-logIndex
+  wallet: Wallet!
+  kind: String! # ATTESTED | COLLATERAL_IN | COLLATERAL_OUT | BORROWED | REPAID | RETIERED | LIQUIDATED | LIQUIDATION_RECORDED | BAD_DEBT
+  blockNumber: BigInt! @index
+  blockTimestamp: BigInt!
+  logIndex: Int!
+  txHash: String!
+  amount: BigInt # token amount (18 decimals) where it applies
+  score: Int
+  tier: String
+  maxLtvBps: Int
+  liqThresholdBps: Int
+  collateralPriceWad: BigInt
+  shortfall: BigInt
+  fromReserves: BigInt # BAD_DEBT only
+  socialized: BigInt # BAD_DEBT only
+  counterparty: String # liquidator / payer where it applies
+}
+
+type LiquidationEvent {
+  id: ID! # txHash-logIndex
+  wallet: Wallet!
+  liquidator: String!
+  repaid: BigInt!
+  collateralSeized: BigInt!
+  shortfall: BigInt!
+  fromReserves: BigInt! # filled from BadDebtRealized in the same transaction
+  socialized: BigInt!
+  score: Int!
+  tier: String!
+  liqThresholdBps: Int!
+  collateralPriceWad: BigInt!
+  blockNumber: BigInt! @index
+  blockTimestamp: BigInt!
+  txHash: String!
+}
+
+# Cumulative market activity, one row ("market").
+type MarketTotals {
+  id: ID!
+  lenderDeposits: BigInt!
+  lenderWithdrawals: BigInt!
+  borrowVolume: BigInt!
+  repayVolume: BigInt!
+  borrowCount: Int!
+  liquidationCount: Int!
+  liquidationsWithShortfall: Int!
+  badDebt: BigInt!
+  badDebtFromReserves: BigInt!
+  badDebtSocialized: BigInt!
+  interestAccrued: BigInt!
+  toReserves: BigInt!
+  attestationCount: Int!
+  lastBorrowIndex: BigInt
+  updatedAt: BigInt!
+}
+
+# Point-in-time history for charts: one row per InterestAccrued.
+type MarketSnapshot {
+  id: ID! # txHash-logIndex
+  borrowIndex: BigInt!
+  interest: BigInt!
+  toReserves: BigInt!
+  blockNumber: BigInt! @index
+  blockTimestamp: BigInt!
+}
