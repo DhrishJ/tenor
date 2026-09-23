@@ -1200,3 +1200,22 @@ objections against the brief. Items already visible:
   UNAVAILABLE (unit-tested). Garbage under *provider* throttling inside
   ChainScore (an empty Etherscan result) is what the consistency check is
   for, and it fired on real data in run 2.
+
+---
+
+# Phase 3 resolutions (2026-09-23)
+
+Approved: P3-O4, P3-O7 (partial verification; Alchemy is CLAIMED only if it
+completes a SCORED path with HyperSync unavailable, otherwise USED), P3-O9,
+P3-O10, P3-O15, and the rest as a block. Liquidation tier cap: **C**, shown
+as a policy cap, separate from the −72 points. Etherscan plan: being
+upgraded; the degraded path stays, stays tested, and stays demonstrable.
+
+## Self-correction SC-1: the Phase 2 gate overstated the live SCORED result
+
+At the Phase 2 gate I reported "SCORED: 850, tier A" for a real borrower.
+That run used a history fixture (labelled as such in the output) that
+assumed no borrowing outside Arbitrum. The live independent check later
+showed borrowing on Base and Optimism too, and live the wallet is
+UNAVAILABLE. I raised this myself on 2026-09-23. It belongs in any "what we
+got wrong" section of the submission.

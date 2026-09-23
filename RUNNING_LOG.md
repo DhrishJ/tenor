@@ -151,3 +151,26 @@ reachability and run the distribution check.
   09-22).
 - **Blocked on you:** objection approvals, the tier-cap rule, an Alchemy key,
   faucet funding (P3-O12), and the portal bounty terms (P3-O14).
+
+## 2026-09-23 (Wed): Phase 3 approved. Corrections to the record
+
+**Correction to the Phase 2 entry (2026-09-22, late):** the end-to-end
+"SCORED 850 (A)" result for `0x0438…7e09` used a **history fixture** that
+assumed no borrowing outside Arbitrum. The live independent check (HyperSync,
+2026-09-23) found borrowing on **Arbitrum (3), Optimism (4) and Base (14)**.
+With live data the service returns **UNAVAILABLE**: "Base data unavailable
+(etherscan, aave degraded at ChainScore); Optimism data unavailable
+(etherscan degraded at ChainScore)". The service behaved as designed. The gate
+report overstated what live data had shown. Nothing in the README or the
+submission may repeat the fixture-backed SCORED claim.
+
+**Reframing the HyperSync "outage" (22:10 on 09-22 to about 00:30 on
+09-23):** it was probably our own query pattern tripping HyperSync's
+free-tier fair-use limit (see P3-O17), not provider downtime. The Alchemy
+fallback therefore guards against self-inflicted throttling as much as
+against outages, and must be described that way.
+
+**Named blocker, Q5 (binding since 2026-09-23):** a demo wallet with real
+Aave or Compound borrowing history, on a chain other than Base or Optimism,
+whose key you control. It blocks Phase 4 entirely. It was first asked on
+2026-09-22.
