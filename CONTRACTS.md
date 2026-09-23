@@ -16,6 +16,7 @@ contracts/src/
   interfaces/IPriceOracle.sol
   mocks/MockPriceOracle.sol TESTNET MOCK: prices set by hand
   mocks/MockERC20.sol       TESTNET MOCK: tUSD, tCOLL with an open faucet
+                            (plus a one-time initial supply to the deployer, for seeding)
 ```
 
 ---
@@ -236,7 +237,7 @@ depth 5,000: 188 successful borrows, 49 liquidations (17 with shortfall),
 
 ## 6. Tests and coverage (2026-09-22)
 
-`forge test`: **152 tests pass, 0 fail**, in 8 suites:
+`forge test`: **153 tests pass, 0 fail**, in 8 suites:
 
 | Suite | Tests | What it covers |
 |---|---|---|
@@ -245,7 +246,7 @@ depth 5,000: 188 successful borrows, 49 liquidations (17 with shortfall),
 | TenorMarket | 78 | including fuzz on LTV, `maxBorrow`, liquidation bounds |
 | Journey | 4 | the demo and the feedback loop, written as documentation |
 | Reentrancy | 2 | hostile hook token |
-| Mocks | 8 | |
+| Mocks | 9 | |
 | Invariants | 1 campaign | the 8 invariants of §5 run as one campaign; Foundry counts it as one test |
 
 `forge coverage` on `src/`:
@@ -344,8 +345,9 @@ README.
 - **Reserves can't be withdrawn** (v1 has no treasury). They sit as a claim
   on the pool.
 - **No keeper pushes score downgrades** (cut list).
-- **Not deployed:** the deploy script and a testnet dry-run are next; they
-  weren't part of the Phase 1 gate.
+- **Not deployed to testnet yet.** `script/Deploy.s.sol` deploys the whole
+  stack and writes `deployments/<chainId>.json`. A dry-run on a local
+  Monad-mode anvil was verified on 2026-09-22.
 - **Two doc discrepancies found:**
   - Monad's verify guide lists `metadata`/`metadata_hash`, which Foundry
     1.8.3 rejects; `foundry.toml` uses `cbor_metadata`/`bytecode_hash`.

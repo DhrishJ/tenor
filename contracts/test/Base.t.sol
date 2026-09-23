@@ -30,8 +30,8 @@ abstract contract BaseTest is Test {
     function setUp() public virtual {
         vm.warp(T0);
         attestor = vm.addr(attestorKey);
-        usd = new MockERC20("Tenor Test USD", "tUSD", 1_000e18);
-        coll = new MockERC20("Tenor Test Collateral", "tCOLL", 1_000e18);
+        usd = new MockERC20("Tenor Test USD", "tUSD", 1_000e18, 0);
+        coll = new MockERC20("Tenor Test Collateral", "tCOLL", 1_000e18, 0);
         registry = new ScoreRegistry(owner, attestor);
         oracle = new MockPriceOracle(owner);
         market = new TenorMarket(

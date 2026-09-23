@@ -54,13 +54,20 @@ contract MockERC20Test is Test {
 
     function setUp() public {
         vm.warp(1_790_000_000);
-        token = new MockERC20("Tenor Test USD", "tUSD", 1_000e18);
+        token = new MockERC20("Tenor Test USD", "tUSD", 1_000e18, 0);
     }
 
     function test_metadata() public view {
         assertEq(token.name(), "Tenor Test USD");
         assertEq(token.symbol(), "tUSD");
         assertEq(token.decimals(), 18);
+    }
+
+    function test_initialSupplyMintedToDeployer() public {
+        MockERC20 seeded = new MockERC20("Seeded", "SEED", 1e18, 500_000e18);
+        assertEq(seeded.balanceOf(address(this)), 500_000e18);
+        assertEq(seeded.totalSupply(), 500_000e18);
+        assertEq(token.totalSupply(), 0);
     }
 
     function test_faucet() public {

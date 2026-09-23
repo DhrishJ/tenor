@@ -51,7 +51,7 @@ contract ReentrancyTest is Test {
     function setUp() public {
         vm.warp(1_790_000_000);
         hook = new HookToken();
-        usd = new MockERC20("Tenor Test USD", "tUSD", 1_000e18);
+        usd = new MockERC20("Tenor Test USD", "tUSD", 1_000e18, 0);
         ScoreRegistry registry = new ScoreRegistry(owner, vm.addr(1));
         oracle = new MockPriceOracle(owner);
         market = new TenorMarket(

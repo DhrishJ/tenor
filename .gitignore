@@ -17,3 +17,6 @@ dist/
 
 # Local-only deploy broadcasts (testnet broadcasts are committed deliberately)
 contracts/broadcast/*/31337/
+
+# Local anvil deployments change every run
+deployments/31337.json

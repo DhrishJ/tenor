@@ -13,8 +13,12 @@ contract MockERC20 is ERC20 {
 
     error FaucetCooldown(uint256 availableAt);
 
-    constructor(string memory name_, string memory symbol_, uint256 faucetAmount_) ERC20(name_, symbol_) {
+    /// @param initialSupply_ minted once to the deployer, to seed pool liquidity.
+    constructor(string memory name_, string memory symbol_, uint256 faucetAmount_, uint256 initialSupply_)
+        ERC20(name_, symbol_)
+    {
         faucetAmount = faucetAmount_;
+        if (initialSupply_ > 0) _mint(msg.sender, initialSupply_);
     }
 
     /// @notice Anyone can claim `faucetAmount` once per cooldown.

@@ -27,6 +27,9 @@ cbor_metadata = true
 bytecode_hash = "none"
 use_literal_content = true
 
+# The deploy script writes addresses to ../deployments/<chainId>.json; nothing else.
+fs_permissions = [{ access = "read-write", path = "../deployments" }]
+
 remappings = [
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
   "forge-std/=lib/forge-std/src/",
