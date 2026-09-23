@@ -1219,3 +1219,67 @@ assumed no borrowing outside Arbitrum. The live independent check later
 showed borrowing on Base and Optimism too, and live the wallet is
 UNAVAILABLE. I raised this myself on 2026-09-23. It belongs in any "what we
 got wrong" section of the submission.
+
+---
+
+# Phase 4 objections so far (raised at the Phase 3 gate, 2026-09-23)
+
+The full Phase 4 objections follow once the new brief arrives. These come
+from Phase 3 evidence.
+
+## P4-O1. HyperSync refuses this machine's IP after modest use; the demo host must not share that fate
+
+**Evidence:** TLS rejections on every `*.hypersync.xyz` host:
+- 2026-09-22, about 22:10 → 00:30;
+- again from about 17:48 on 2026-09-23, still ongoing at 18:37;
+- the second time after only paced traffic (1 request/s), with `docs.envio.dev`
+  reachable throughout.
+
+**Instead:**
+1. **You ask Envio (a sponsor, on Discord)** whether the token or IP is
+   being blocked, and whether hackathon use can be allowlisted.
+2. **The Alchemy key**, so the fallback can carry the history check.
+3. **Pre-warm the history cache** for demo wallets on the deployed host.
+4. **Host the attestor on an always-on service with a stable egress IP**,
+   not serverless (see P4-O2).
+
+## P4-O2. The attestor should be an always-on service, not Vercel functions
+
+**Why:**
+- ChainScore's legacy limit is keyed per IP (`middleware.ts`), and serverless
+  egress IPs are shared with other tenants.
+- HyperSync blocks at the IP level (P4-O1).
+- A single always-on instance makes nonce reservations and caches coherent.
+- Supabase (Postgres store) still matters, because it makes those survive a
+  restart, which is what the brief asks.
+
+**Proposal:** Railway, Fly or Render, one instance. Cost and account are
+your call; I haven't checked prices.
+
+## P4-O3. Q5 remains the binding constraint, with a new condition
+
+The demo wallet must have Aave or Compound borrowing history, and **no
+borrowing on Base, Optimism or Scroll** (those are UNAVAILABLE until
+ChainScore's Etherscan plan changes, and Scroll can't be scored at all). All
+11 fixture wallets meet the chain condition, but they're public addresses
+whose keys we don't hold.
+
+## P4-O4. Envio Cloud deploys from a GitHub repo, so the repo must be pushed before the indexer can go live
+
+The repo isn't on GitHub yet. Pushing it (public) is a prerequisite for the
+hosted indexer and for the submission anyway. **Needs your go-ahead**, since
+it publishes the work.
+
+## P4-O5. The mock oracle's `maxPriceAge` is a demo-reliability decision
+
+If it's short, judges visiting days later hit "price stale" and can't
+borrow. If it's long, the staleness guard is decorative on testnet.
+
+**Proposal:** 7 days, plus a daily price re-stamp (keep-alive) documented in
+RUNNING_LOG, with the README explaining why.
+
+## P4-O6. Things only you can do
+
+- Fund a fresh throwaway deployer from `faucet.monad.xyz`. It's a JavaScript
+  page, so I can't read its limits.
+- Read the portal's bounty list and the Perpl terms (P3-O14).

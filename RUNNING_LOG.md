@@ -174,3 +174,47 @@ against outages, and must be described that way.
 Aave or Compound borrowing history, on a chain other than Base or Optimism,
 whose key you control. It blocks Phase 4 entirely. It was first asked on
 2026-09-22.
+
+## 2026-09-23 (Wed), evening: Phase 3 built and at the gate
+
+**Done**
+- **Attestor:**
+  - Alchemy fallback (Aave on 5 chains) with partial verification and
+    per-chain source attribution.
+  - Scroll guard (ChainScore issue #21), tier-C liquidation cap itemized
+    separately from the −72 points.
+  - Serialized, paced HyperSync with 429 retry; history cache.
+  - Labelled fixture mode (local only), CORS.
+  - 50 unit tests.
+- **Indexer (Envio HyperIndex 3.12.1):** Wallet, Attestation,
+  WalletEvent (loop timeline), LiquidationEvent, MarketTotals,
+  MarketSnapshot. 3 handler tests. Ran locally (Docker via Colima, no admin
+  rights): caught up from the deployment block and stayed current.
+- **Web (Next.js 14.2.35, wagmi 2.19.5, RainbowKit 2.2.11):** Score,
+  Compare, Market, Activity. The full journey was walked in a browser against
+  local anvil: attest → borrow at A → price gap → liquidation with shortfall →
+  score invalidated → re-attest at 451 (FLOOR) → the same 500 tCOLL now
+  supports 600 instead of 800 tUSD.
+- Filed DhrishJ/chainscore#21 (Scroll answered with Ethereum data).
+
+**Browser walkthrough: 16 breaks found**
+- **Fixed:** 1, 2, 3, 5–14 and 16.
+- **Documented, dev-only:** 4 (the mock wallet doesn't reconnect after a full
+  reload), 15 (the first click during initial compile doesn't connect).
+- **Notable:**
+  - #3 local anvil without interval mining → `IssuedInFuture` (use
+    `--block-time 1`);
+  - #12 polling paused in hidden tabs (now background polling plus refetch
+    on focus);
+  - #14 the loop strip used post-liquidation collateral (now uses the
+    pre-liquidation collateral at the borrow-time price).
+
+**Blocked**
+- **HyperSync:** this IP has been refused again since about 17:48. The paced
+  distribution rerun can't run (14 wallets attempted, all UNAVAILABLE for
+  history, 0 ChainScore calls spent).
+- **Q5 (since 2026-09-23):** no demo wallet yet.
+- **No Alchemy key:** the fallback can't be demonstrated live.
+
+**ChainScore usage:** about 10 legacy calls today during the walkthrough
+(24 h cache).
