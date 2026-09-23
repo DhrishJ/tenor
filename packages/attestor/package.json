@@ -1,0 +1,26 @@
+{
+  "name": "@tenor/attestor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tenor attestation service: validates ChainScore output and signs EIP-712 score attestations.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "e2e": "tsx scripts/e2e-local.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.1",
+    "hono": "4.13.8",
+    "viem": "2.56.8",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}
