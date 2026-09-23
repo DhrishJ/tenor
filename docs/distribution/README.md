@@ -59,3 +59,28 @@ degraded for **all 50** wallets. So whether any of them borrowed on Base
 can't be known from ChainScore. In the real pipeline, the independent check
 finds Base borrowing, and those wallets are UNAVAILABLE ("Base data
 unavailable").
+
+## Run 2: through the real pipeline (2026-09-23, after HyperSync came back)
+
+The same 50 wallets through `packages/attestor/scripts/distribution.ts`: live
+HyperSync history check, live ChainScore, Tenor's validation and minimum
+rule. Display-only; no signing. Raw output: `pipeline-2026-09-23.jsonl`.
+
+| Outcome | Wallets |
+|---|---|
+| UNAVAILABLE, **our own HyperSync queries throttled (429) or timed out** | 30 |
+| UNAVAILABLE, **Base or Optimism data degraded at ChainScore** | 7 |
+| UNAVAILABLE, **consistency check** (Polygon: 9 on-chain borrows, empty ChainScore tx history) | 1 |
+| SCORED | 11 (A 9, B 2; all Ethereum-only borrowers) |
+| INSUFFICIENT_HISTORY | 1 |
+
+**What this shows:**
+- The throttled 30 aren't a property of the wallets. This run exceeded
+  HyperSync's free "fair use" budget (7 chains per wallet, about 4 wallets a
+  minute). It must be rerun serialized and paced.
+- **Of the 20 wallets whose history check completed, 8 (40%) are
+  UNAVAILABLE** because they borrowed on Base or Optimism, where ChainScore's
+  data is degraded on every call.
+- **The consistency check fired on real data:** `0x09f2e285…` was SCORED
+  850/850 in the ChainScore-only analysis (run 1), and is refused here
+  because its Polygon transaction history came back empty despite 9 borrows.

@@ -1130,3 +1130,73 @@ chain.
 - **The ≥ 20 multi-chain requirement can't be met from this sample.** Getting
   there needs HyperSync-based discovery (wallets with Aave `Borrow` logs on 2
   or more chains). It's queued for when HyperSync returns.
+
+## P3-O17. (Found running the real pipeline) Our HyperSync usage trips the free-tier limit
+
+**Evidence:** `docs/distribution/README.md`, run 2. 30 of 50 wallets were
+UNAVAILABLE from HyperSync 429s or timeouts, at about 4 wallets a minute ×
+7 parallel chain queries each. The earlier TLS-rejection "outage" (about
+22:10 to 00:30) may have been the same protection.
+
+**Instead:**
+- Serialize history queries (no 7-way fan-out per wallet), with backoff on
+  429.
+- Cache history results for the 24 h TTL.
+- Pre-warm the cache for demo wallets.
+- The Alchemy fallback (P3-O7) covers throttling as well as outages.
+- If judging load still trips it, HyperSync Starter is $70/month for 100
+  requests a minute (envio.dev pricing). Your call, not needed yet.
+
+## P3-O18. (Found running the real pipeline) 40% of real borrowers are unscoreable because of ChainScore's Etherscan plan
+
+**Evidence:** 8 of the 20 wallets whose history check completed borrowed on
+Base or Optimism, and are UNAVAILABLE with the chain named, as designed.
+Etherscan's free tier excludes Base, OP and Avalanche (RESEARCH, P2-O2).
+
+**Why it matters now:** a judge who connects a real borrowing wallet has
+roughly a 40% chance of seeing "Base data unavailable". That's honest, but
+it's the most likely first impression.
+
+**Options:**
+1. **ChainScore upgrades its Etherscan plan.** That's an operational change
+   to your running prior-art service, not code, so provenance is unaffected.
+   It removes the failure at the source. Needs you; price not verified by me.
+2. **Accept it**, and make the README and UI explain it prominently (already
+   required by P2-O2).
+3. **Not recommended:** excluding degraded chains would let a Base
+   liquidation hide from the minimum.
+
+---
+
+# Phase 4 brief received before the Phase 3 gate (2026-09-23)
+
+## P4-O0. The Phase 4 gate check is false on almost every item; Phase 3 has not started
+
+| Gate claim | Actual |
+|---|---|
+| Phase 3 approved | The Phase 3 objections (P3-O1 to P3-O18) haven't been presented or approved yet. |
+| Distribution check run on 50 wallets and reported | Run twice. Run 1 used ChainScore-only discovery. Run 2 went through the real pipeline, but 30 of 50 were throttled by HyperSync, so it is **not yet a valid distribution** (P3-O17). |
+| Indexer catching up and current | **Not built.** |
+| Full journey walked in a browser | **No frontend exists.** |
+| Alchemy fallback shipped and tested | **Not built.** No Alchemy key; the free plan is limited (P3-O7). |
+| BOUNTIES.md current incl. platform list | Created, but the platform list needs your portal login (P3-O14). |
+
+**Instead:** Phase 4 waits. The Phase 3 objections go first. It's
+2026-09-23 and Phase 3's original window was Oct 3–6, so we're ahead of
+schedule, not behind. When Phase 3 clears, I'll write the full Phase 4
+objections against the brief. Items already visible:
+
+- **"Borrow with stale score: rejected, floor tier still available" (§5)**
+  contradicts O6: a stale score is *priced at FLOOR*, never rejected. Only an
+  amount above FLOOR terms reverts.
+- **"Tier capped at B by policy" (§5) vs P3-O1:** I proposed a cap at C
+  (642); the brief now says B. Undecided. This needs your one-word answer.
+- **ChainScore's rate limit (§2) is keyed on `bucket:IP`** (`middleware.ts`,
+  `${bucket}:${ip}`). A judge's browser never calls ChainScore; only the
+  attestor does, so the budget is the attestor's egress IP. On serverless,
+  that IP may be shared with other tenants' traffic, which argues for an
+  always-on host with a stable IP over Vercel functions.
+- **Throttling produces a clean 429** (not garbage), which our client maps to
+  UNAVAILABLE (unit-tested). Garbage under *provider* throttling inside
+  ChainScore (an empty Etherscan result) is what the consistency check is
+  for, and it fired on real data in run 2.
