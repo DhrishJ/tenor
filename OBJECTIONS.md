@@ -756,3 +756,57 @@ Meanwhile, with your OK, I can do the deploy script and dry-run (Phase 1
 remainder), the refusal layer, the three states, the aggregation interface,
 the signing, the nonce reservations and the in-memory store. All of that is
 testable without any of the four items above.
+
+## Phase 2 resolutions (2026-09-22)
+
+All twelve approved. TTL stays 24 h. Additions from your approval, now
+requirements:
+- The README says the upstream "does not distinguish 'no data' from
+  'provider failed', and the layer in front of it does."
+- The UI names the chain when a wallet is UNAVAILABLE for chain-data
+  reasons.
+- The Compound contract-wallet gap goes in the README.
+- Impersonation is used only in local tests and never appears in the demo.
+- ChainScore quota burn is tracked in RUNNING_LOG.md.
+
+## P2-O13. (Raised mid-phase) The v1 endpoint cannot support the primary defense; the legacy endpoint can
+
+**Approved decision:** use ChainScore v1 (P2-O8).
+
+**Why it's wrong:** the consistency check you made the primary defense
+(P2-O3: a borrowing-derived score alongside `totalTxns == 0`) needs
+`totalTxns` and `walletAge`, and **the v1 response doesn't contain them**.
+
+**Evidence:**
+- `lib/scoring/service.ts` `buildEnvelope()` returns score, grade,
+  percentile, modelScore, modelVersion, featureSetVersion, calibratedPD,
+  factors, integrity, dataCompleteness, degradedSources, newWallet,
+  noBorrowHistory, asOf, computedAt, cached and stale. There is no
+  transaction count and no wallet age.
+- The legacy `GET /api/score/[address]` returns `walletAge` and `totalTxns`
+  (seen live in every probe).
+- The legacy route computes fresh on every call: no cache and no
+  last-known-good. It's limited to **20 requests per minute per IP**
+  (`middleware.ts`, `expensiveLimiter`).
+
+**Options:**
+1. **Legacy endpoint (recommended).** It has the fields the primary defense
+   needs, needs no API key, and never serves stale or cached data (so
+   P2-O7's stale case can't occur). Costs:
+   - It's marked deprecated.
+   - 20/min per egress IP. At 1–2 calls per attestation, plus our 24 h
+     cache, that's fine for demo scale.
+   - It lacks `computedAt`. Its `timestamp` is the computation time, and it
+     serves that role.
+   - It returns no integrity penalty field. Its `score` is the model score,
+     which is the right thing to call the "ChainScore score".
+2. **v1 plus parsing the transaction count from `factors[].explanation`
+   text.** Fragile; rejected.
+3. **Add `walletAge`/`totalTxns` to ChainScore's v1 envelope.** That's a
+   change to the prior-art repository made during the window, and it blurs
+   provenance. Rejected unless you want it.
+
+**Status:** the upstream client sits behind an interface. I've built the
+legacy adapter (it needs no credentials, so it's testable now). Switching to
+v1 is a one-file change. **Needs your confirmation.** It also means **no
+ChainScore API key or Vercel login is needed.**
