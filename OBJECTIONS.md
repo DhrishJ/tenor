@@ -1,0 +1,758 @@
+# OBJECTIONS
+
+Append-only. Each phase adds a section. Each objection gives what the brief
+says, why it is wrong, the evidence, and what to do instead.
+
+---
+
+# Phase 1: Contracts and test suite (raised 2026-09-22)
+
+Ranked by how much each one changes the build. **O1–O4 change the
+architecture.** O5–O12 are corrections to specific sections. O13 is the gate.
+
+## O1. The Monad argument in §6 is quantitatively false, and §5.5 would prove it
+
+**Brief says:** "Faster finality means a liquidation executes closer to its
+trigger price … the same loss budget supports a higher safe LTV. Monad's
+sub-second finality therefore buys capital efficiency directly." §5.5 asks for
+a simulation comparing 600 ms with 12 s.
+
+**Why it's wrong:** Bad debt in an overcollateralized market needs the price
+to fall *through the whole buffer* between the liquidation trigger and
+execution. Under any continuous price model, the move you can expect in
+0.6 s or 12 s is orders of magnitude smaller than a 6–10% buffer. The
+block-time difference contributes nothing measurable. Shortfall comes from
+**jumps** (instant gaps, where no chain speed helps) and from **multi-hour
+failures**: oracles that stop updating, liquidators priced out by gas during a
+crash, networks halting.
+
+**Evidence** (zero-drift random-walk price model, computed 2026-09-22; the
+code is in the session log and goes into `docs/` if we keep this): the chance
+that price falls through the buffer during the liquidation delay.
+
+| vol | LT | 0.6 s | 12 s | 1 min | 1 h | 6 h | 24 h |
+|---|---|---|---|---|---|---|---|
+| 80% | 94% | 0 | 0 | 0 | 2e-13 | 1.6e-3 | 7.0e-2 |
+| 150% | 90% | 0 | 0 | 0 | 2e-11 | 3.6e-3 | 9.0e-2 |
+
+At 80% vol, a one-standard-deviation move equal to a 5% buffer takes **36
+hours**. Block time is not the variable that matters.
+
+An honest §5.5 would output "no measurable difference between 600 ms and
+12 s". Presented alongside §6, that refutes the pitch in our own repo, and a
+Paradigm or Dragonfly judge will run the same arithmetic.
+
+**Instead:** drop §5.5 (it's first on the cut list anyway). Replace the §6
+wording with a claim that survives the arithmetic:
+
+> Liquidations only protect lenders if they land when markets crash, which is
+> exactly when congested chains price them out or delay them (Black Thursday,
+> March 2020, is the canonical case). Monad's throughput and low fees keep
+> liquidation cheap and prompt under load, so the liquidation threshold
+> buffer is not eaten by congestion. Score attestations refresh roughly
+> daily; nothing here depends on per-block repricing.
+
+This is an argument, not a measurement, and we label it that way. If you want
+a quantitative piece, the honest version models **liquidation delay under
+congestion in minutes to hours, plus jump risk**, not 0.6 s vs 12 s. It's
+still first on the cut list.
+
+## O2. A shortfall-keyed feedback loop almost never fires; key it on liquidations
+
+**Brief says (§4):** a liquidation with shortfall calls `recordShortfall`;
+this is "the single most important thing in the repo".
+
+**Why it's wrong:** By O1, shortfall in an overcollateralized market needs a
+price jump bigger than the buffer. In real conditions that's rare. In our demo
+it happens only because we move the mock oracle by hand. A headline feature
+that fires only when an admin stages a gap is weak, and a judge will see that.
+
+The model's label is *liquidation*, not shortfall. A liquidation on Tenor is
+exactly a positive example of what the model predicts, observed natively on
+Monad.
+
+**Instead:** record **every liquidation**, plus shortfall when there is one:
+
+- `liquidationCount`, `lastLiquidatedAt`, `shortfallCount`, `totalShortfall`.
+- The pitch gets stronger: *Tenor generates native Monad credit history*.
+  Every liquidation becomes a labelled outcome, so the cold-start problem
+  shrinks with use.
+- Shortfall stays tracked as the more severe event.
+- The loop fires in every liquidation demo, not only staged gaps.
+
+## O3. The penalty must be enforced on-chain, not left to the attestation service
+
+**Brief says (§4):** "The attestation service reads defaultCount and
+totalShortfall and lowers the wallet's next score."
+
+**Why it's wrong:**
+
+1. **An old attestation still works.** Signatures issued *before* the
+   liquidation stay valid until their submit deadline, and an
+   already-submitted score stays valid until its TTL. A borrower liquidated
+   at 10:00 still holds a valid high score until it expires.
+2. **The penalty depends on off-chain code**, which is exactly the trust
+   assumption a judge will attack.
+3. **"Lowers the score" means changing the model's output** with a
+   hand-written rule, and it must not be passed off as the model's number.
+
+**Instead:** enforce it in the registry.
+
+- A recorded liquidation **immediately invalidates** the wallet's current
+  score (`isStale = true`, so the wallet falls back to unscored terms).
+- The registry **rejects any attestation with
+  `issuedAt ≤ lastLiquidatedAt`**.
+- The off-chain service then applies a documented *policy overlay*, for
+  example "tier capped at C for 90 days after a Tenor liquidation". It is
+  labelled "Tenor policy", not "ChainScore score".
+
+All of this is on-chain and fully testable in Phase 1. It's a few lines in
+the registry.
+
+## O4. Per-tier rates have no loss-based justification; use one rate and let the score move LTV only
+
+**Brief says (§3.1):** `tierToRate(tier, utilization)`, "derived from an
+assumed annualized liquidation rate per tier".
+
+**Why it's wrong:** In an overcollateralized market, **a liquidation costs the
+lender nothing**. The liquidator repays the debt in full, and the *borrower*
+pays the bonus. Lender loss is shortfall only, and by O1 shortfall is driven
+by jumps and outages, not by who the borrower is. A rate premium "derived
+from the liquidation rate" prices a cost the lender doesn't bear. The
+arithmetic the brief asks me to write out would show the premium should be
+about zero.
+
+**Instead:**
+
+- **One rate curve for all borrowers** (a linear utilization curve plus a
+  reserve factor). The score changes **LTV and caps only**.
+- The demo message gets cleaner: "same loan, same rate, 40% less
+  collateral".
+- This also answers §0.1's index question (see O5).
+
+If you want a tier rate premium anyway, the honest version is a
+reserve-contribution premium: lower tiers get liquidated more often, and each
+liquidation is a gap exposure, so they pay more into the reserve. We'd label
+it a policy placeholder with no calibration.
+
+## O5. Answer to §0.1: yes to an index, but one global index, and no supply index
+
+**Brief says:** "borrow and supply indices"; asks whether index-based accrual
+is worth it.
+
+**Assessment:**
+
+- **Per-tier rates** (the old plan) would need six tier buckets and
+  "re-bucketing" debt whenever a score changes. That's the riskiest code in
+  the market.
+- **With O4, one global borrow index** (Compound-style) is less code than
+  per-position linear interest, and it makes "sum of debts equals total debt"
+  a clean invariant.
+- **A supply index is unnecessary:** ERC-4626 share accounting prices lender
+  shares off `cash + totalDebt − reserve`. Interest and socialized losses show
+  up in the share price automatically. That also covers §2.2's "documented
+  index adjustment": socializing bad debt just means writing down
+  `totalDebt`, which lowers the share price. No second index.
+
+**Instead:** one borrow index (1e27 precision), ERC-4626-style lender shares
+with virtual-offset protection against inflation attacks, and no supply index.
+
+## O6. §3.4 contradicts §5.4: "borrow enforces score present, not stale"
+
+**Brief says:** borrow requires a present, fresh score, **and** §5.4 has an
+unscored wallet borrowing ("borrows materially less"). The §5.3 invariant says
+"no borrow was ever priced by a stale or absent score".
+
+**Why it's wrong:** You can't have both. The approved design (PLAN §2.3) has
+absent or stale scores fall back to **unscored terms**. The contrast between
+unscored and scored terms *is* the demo.
+
+**Instead:**
+
+- **Borrow rule:** a stale or absent score prices at **Unscored** terms,
+  never better.
+- **Invariant:** "every borrow is priced at the tier of the score that was
+  valid in that block, or at Unscored terms".
+
+## O7. The shortfall definition in §3.4 is mis-specified
+
+**Brief says:** "calls recordShortfall when seized collateral does not cover
+repaid debt".
+
+**Why it's wrong:** A correctly built liquidation caps the repay so the
+liquidator never repays more than the collateral they seize:
+`maxRepay = collateralValue / (1 + bonus)`. Seized collateral *always* covers
+the repaid debt. Shortfall is the debt **left over** once the collateral is
+exhausted, which no liquidator will ever repay.
+
+**Instead:** when a liquidation leaves collateral at 0 and debt above 0, the
+remaining debt is realized shortfall:
+
+1. Write it off from `totalDebt`.
+2. Draw it from the reserve.
+3. Socialize any remainder through the share price.
+4. Call `recordShortfall`.
+
+Dust collateral that isn't worth liquidating is handled by letting the
+liquidator seize all remaining collateral when it's below the
+repay-equivalent.
+
+## O8. Answer to §0.1: drop the close factor; add an on-chain bound on LT × bonus
+
+**Brief asks:** is "close factor plus bonus" sufficient, given a mock oracle?
+
+**Assessment:** A close factor protects big positions in deep markets from
+being over-liquidated. Our caps keep positions small, and a 50% close factor
+adds repeated partial calls, dust, and a harder shortfall invariant.
+
+There's also a hard constraint the brief doesn't state: a liquidator is paid
+in full at the trigger only if **LT × (1 + bonus) ≤ 1**. At LT 94% with an 8%
+bonus the product is 1.015, which means liquidators lose money at the trigger
+and positions rot.
+
+**Instead:**
+
+- **Close factor 100%:** the liquidator chooses any repay amount up to the
+  cap in O7.
+- **Fixed bonus of 5%.**
+- A **compile-time check in RiskParams** that `LT × (10000 + bonus) ≤ 10000²`
+  for every tier, alongside the `maxLTV < 10000` ceiling.
+- On-screen label in the demo: the price drop that triggers liquidation is
+  staged through the mock oracle.
+
+## O9. §0.1 LTV band: the model's reproducible performance supports no specific spread
+
+**Brief asks:** what spread does the model's actual performance support?
+
+**Answer:** none. Nothing about the model's performance has been reproduced
+(INVENTORY §7). At most we can rely on its *ranking*, and even that is
+unverified.
+
+Also, per O4, lender risk from LTV is gap risk, which depends on the
+collateral's volatility, not the borrower. The score legitimately affects
+**how often a position gets near the threshold**, and therefore how much gap
+exposure it creates. That supports **ordering** the tiers, not sizing the
+gaps between them.
+
+**Instead:**
+
+- Label the LTV band a **risk-appetite policy placeholder**, not a
+  calibration.
+- Set the **top tier by the LT × bonus bound and the buffer**, not by the
+  model.
+- **Narrow the spread** so an unverified ranking can't move terms too far.
+
+Proposed values (all placeholders):
+
+| Tier | Max LTV | LT | Buffer |
+|---|---|---|---|
+| Unscored = F | 60% | 70% | 10 pts |
+| D | 65% | 75% | 10 pts |
+| C | 70% | 78% | 8 pts |
+| B | 75% | 82% | 7 pts |
+| A | 80% | 86% | 6 pts |
+
+At the extremes, $1,000 of debt needs $1,667 of collateral unscored and
+$1,250 at tier A. That still lands in 45 seconds.
+
+## O10. The §1 framing overstates, and a sharp judge will catch it
+
+**Brief says:** "setting a liquidation-risk parameter (LTV) using a
+liquidation-risk model … is the correct application of that label. Do not
+apologize."
+
+**Why it's wrong:** The direction is right, but the claim goes further than
+the evidence. The model measured liquidation propensity **at the LTVs
+borrowers chose on Aave/Compound**. Tenor lets them borrow at a *different*
+LTV. Whether the ranking still holds when the buffer changes is an
+assumption. Stating it confidently isn't apologizing; hiding it is what a
+judge will call out.
+
+**Instead:** use this wording in comments and docs:
+
+> Tenor sets a liquidation-risk parameter from a liquidation-risk model: the
+> score ranks how likely a wallet is to run a position into liquidation, and
+> Tenor gives lower-risk wallets a thinner buffer. We assume that ranking,
+> measured on Aave and Compound, carries over to Tenor's LTVs. Tenor's own
+> liquidation records (O2) are what will test it.
+
+## O11. Two §5.3 invariants are false as written
+
+- **"Total exposure never exceeds the global cap."** Interest accrues after a
+  borrow, so total debt can pass the cap with no new borrowing. That's
+  intended behavior, not a bug.
+  **Instead:** "no borrow succeeds that would push total debt above the cap,
+  evaluated after accruing interest".
+- **"Recorded shortfall plus reserve draw equals realized shortfall."** This
+  double-counts. `recordShortfall` records the *full* realized amount against
+  the wallet, and the reserve is one of two places the loss goes.
+  **Instead:** two invariants:
+  - Σ recorded shortfall == Σ realized shortfall
+  - reserve draw + socialized loss == realized shortfall
+
+## O12. Smaller corrections
+
+- **Tier stored in the registry (§3.2).** Derive it from the score through
+  `RiskParams` at read time. A stored tier goes stale the moment RiskParams
+  changes, and then two fields can disagree.
+- **Pause semantics (§3.4)** need one more rule:
+  - During a pause, **allow** repay, adding collateral, lender withdraw (up
+    to available cash), and collateral withdraw (still subject to the health
+    check).
+  - **Block** borrow and **liquidate.** If we paused because the oracle is
+    wrong, liquidating on it would be harmful.
+  - Borrowers are never trapped: they can always repay and then withdraw.
+- **"supply" is ambiguous.** The market needs both a lender path
+  (`deposit`/`withdraw`) and a collateral path
+  (`depositCollateral`/`withdrawCollateral`). The brief lists only one.
+- **Domain separator (§3.2).** OpenZeppelin's `EIP712` already caches it and
+  rebuilds it when `block.chainid` changes. We use it rather than
+  hand-rolling, and a test forks the chain ID to prove it.
+- **The ban on the word "undercollateralized" (§1).** INVENTORY, PLAN and this
+  file use it to record *why* we rejected it. Rewriting decision records
+  erases the audit trail you asked judges to rely on. Proposal: banned in
+  code, UI, README (except the "why not" section) and the submission;
+  allowed in decision records (PLAN, OBJECTIONS, RUNNING_LOG).
+- **§5.4 "re-attest at a lower score".** In Phase 1 the test signs the lower
+  score itself, standing in for the service. With O3 it additionally proves
+  that the *old* score is dead on-chain, which is the part that matters.
+
+## O13. Gate check is false
+
+**Brief says:** "Git identity set, first commit made."
+
+**Evidence (2026-09-22):** `git config --global user.name` and `user.email`
+are empty, and `git log` reports "your current branch 'main' does not have
+any commits yet". Foundry is also not installed.
+
+**Instead:** you set the git identity, and I make the first commit (Phase 0
+docs and the rename to Tenor), then install Foundry (≥ 1.8.0) before any
+contract code.
+
+## Still unanswered from Phase 0 (not blocking Phase 1, blocking later)
+
+- **Q3:** worst-of-chains aggregation (affects Phase 2).
+- **Q4:** is a testnet submission eligible? The portal shows chain 143.
+  (Affects everything.)
+- **Q5:** a demo wallet with real Aave or Compound history (affects
+  Phases 2 and 4).
+- **Q6:** ChainScore API as a black box vs vendoring the scorer (affects
+  Phase 2).
+
+## Assumptions I'm least confident about in my own objections
+
+1. **O4 (one rate for all):** it makes the "rate differs" half of the
+   original demo disappear. If you value the visual contrast in rates, the
+   reserve-premium variant keeps it, labelled as policy.
+2. **O1's reframe** still rests on an unmeasured claim: that Monad keeps
+   liquidations prompt under crash-level load. It's a plausible design
+   argument, not evidence, and must be presented that way.
+
+## Phase 1 resolutions (2026-09-22)
+
+| # | Decision |
+|---|---|
+| O1 | Accepted. §5.5 is dropped; the §6 wording is deleted (it never reached code). The replacement framing is adopted, amended per O14 below. |
+| O2 | Accepted. The registry records `liquidationCount` and `lastLiquidatedAt` (these drive the feedback loop), plus separate `shortfallCount` and `totalShortfall`. |
+| O3 | Accepted. The registry rejects any attestation with `issuedAt <= lastLiquidatedAt`, and a liquidation invalidates the current score. Tested in Phase 1, and again in the Phase 4 adversarial pass. |
+| O4 | Accepted. One rate for everyone, one global borrow index, share-based supply. The reserve is respecified in share terms (see CONTRACTS.md). |
+| O6 | Resolved. A present score must be fresh. An absent or stale score prices at the floor tier. |
+| O7, O11 | Mine to resolve. As proposed. |
+| O8/O9 | Accepted. LTV 60–80%, each liquidation threshold = LTV + 5 points, no close factor, fixed 5% bonus, permanent compile-time bound. |
+| O12 | No answer. My proposal applies by default: the word is banned in code, UI, README (except the "why not" section) and the submission; allowed in decision records. |
+
+## O14. Pyth's staleness is not evidence of oracle cadence; remove it from the Monad argument
+
+**Brief says:** "The price oracle updates far slower than blocks … Pyth's
+MON/USD feed was 15 days stale … the oracle refreshes on a cadence measured
+in minutes at best."
+
+**Why it's wrong:**
+
+- **Pyth is a pull oracle.** The on-chain price is only as old as the last
+  transaction that pushed an update. On mainnet, a liquidator fetches a price
+  from Pyth's off-chain price service, Hermes (published every ~400 ms), and
+  posts it *in the liquidation transaction itself*. Then oracle freshness is
+  sub-second and set by the liquidator, not by a cadence. The 15-day
+  staleness we saw is an **unused testnet feed** that nobody pulled. It tells
+  us nothing about production timing.
+- **Push oracles don't work that way either.** They update on deviation
+  (RedStone on Monad testnet: 0.5% deviation *or* a 6 h heartbeat). The
+  6-hour heartbeat applies to a flat market. During a crash, the 0.5%
+  deviation trigger fires on every such move.
+
+A judge who knows Pyth would read this line as us misunderstanding pull
+oracles, and that would undercut the O1 argument that's actually sound.
+
+**Evidence:** RESEARCH.md §4 (Pyth listed as "Pull"; RedStone "0.5%
+deviation & 6h heartbeat"), and the Monad oracle docs describing Pyth as
+"Users pull aggregated prices … onto Monad when needed".
+
+**Instead:** leave the oracle out of the timing argument. Mention the stale
+Pyth feed only where it's true: as the reason Tenor uses a mock on testnet.
+
+**One wording fix to the adopted framing:** "a race run by bots against a
+congested mempool". Monad has **no global mempool** (docs:
+developer-essentials/differences, "Transactions" §5). Use "a race run by
+bots for scarce block space".
+
+## O15. "The loop is the label" overstates it by one step
+
+**Brief says:** a Tenor liquidation "is the label … Tenor produces the
+precise outcome variable ChainScore was trained to predict."
+
+**Why it's wrong:** ChainScore's label is a liquidation **on Aave V2/V3 or
+Compound V2**, under **those protocols' LTVs and thresholds**, inside a
+**fixed six-month window after an observation cutoff** (`LABELS.md`). A Tenor
+liquidation is the same *kind* of event with different parameters. Worse,
+it's **caused partly by Tenor's own terms**: high-score wallets get thinner
+buffers, which mechanically raises their chance of liquidation. A model
+retrained on Tenor liquidations without accounting for this learns from terms
+its own scores set (a feedback loop between score and outcome). "The precise
+outcome variable" is exactly the kind of data claim a judge can pull apart.
+
+**Instead:**
+
+- Claim: "Tenor records, on-chain, the same kind of event ChainScore
+  predicts (a liquidation), together with the terms it happened under, so
+  future model versions can learn from Monad-native outcomes."
+- To make that true, **every `Borrow` and `Liquidate` event carries the score,
+  tier, max LTV and liquidation threshold in force.** That's a small addition
+  to the event design, now in the contracts.
+
+## O16. "Tier-differentiated rates point the wrong way" is unproven
+
+**Brief says:** priced honestly, residual bad debt sits with the high tiers,
+so tier rates "point the wrong way".
+
+**Why it's wrong:** Expected gap loss per position is roughly
+P(position reaches liquidation) × P(gap exceeds buffer | liquidation) ×
+severity. High tiers have a lower first factor (per the model's ranking) and
+a higher second factor (thinner buffer). The net direction depends on
+magnitudes we haven't measured. The honest statement is "undetermined", not
+"reversed".
+
+**Instead:** the README says the score doesn't change the rate because the
+LTV already absorbs the risk difference, and residual gap loss is priced
+uniformly through the reserve factor. Make no claim about which direction
+tier rates "should" go. Suggested two sentences:
+
+> In a collateralized market the interest rate compensates lenders for
+> expected loss, and the LTV controls how much loss is possible. A normal
+> liquidation repays the lender in full, so the score acts on the LTV, and
+> the small residual gap risk is priced uniformly through the reserve factor.
+
+---
+
+# Phase 2: Attestation service (raised 2026-09-22)
+
+Evidence was gathered on 2026-09-22. Re-probes of the live API are shown
+where relevant.
+
+## P2-O1. The gate check is false
+
+**Brief says:** "Commits made. Deploy script written and tested against a
+local Monad-mode node."
+
+**Evidence:**
+- `git config --global user.name/user.email` are both empty.
+- `git log` says "your current branch 'main' does not have any commits yet".
+- `contracts/script/` is empty.
+
+**Instead:**
+- You set the git identity, and I commit (Phase 0, 1 and 2 docs; contracts
+  and tests as separate readable commits).
+- The deploy script plus a local Monad-mode anvil dry-run is Phase 1 work
+  that was approved as "next". I'll finish it before any Phase 2 code; it's
+  under an hour.
+
+## P2-O2. "Every source on every chain healthy" would refuse every wallet, forever
+
+**Brief says (§4b):** refuse unless "every upstream source for every chain
+queried reported healthy."
+
+**Why it's wrong:** Two chains are degraded on every call, not now and then.
+Etherscan's docs list **Base, OP Mainnet and Avalanche as paid-tier only**,
+and ChainScore's key is free tier.
+
+**Evidence:**
+- Probes of `chainscore.dev/api/score/0x0438…7e09`, twice per chain:
+  - Base: `degradedSources: ["etherscan","aave"]` both times.
+  - Optimism: `["etherscan"]` both times.
+- Etherscan's supported-chains page lists Base, OP Mainnet and Avalanche
+  under "Paid Tier Only".
+
+**Instead:** only chains that could change the result must be healthy.
+
+1. The independent history check (P2-O4) decides, per chain, whether the
+   wallet has ever borrowed on Aave or Compound.
+2. **No borrowing on a chain:** exclude that chain, with the reason
+   recorded. ChainScore can't score it anyway, since its model only scores
+   borrowers. Its health doesn't matter.
+3. **Borrowing on a chain, but ChainScore degraded there: UNAVAILABLE.**
+   Excluding that chain would let a wallet benefit from a provider outage
+   under the min rule.
+4. **Our own independent check fails for a chain: UNAVAILABLE.**
+
+Consequence you should know: with ChainScore's current Etherscan plan,
+**any wallet that has borrowed on Base or Optimism will always be
+UNAVAILABLE**. Its transaction-history features would be zeros, so any score
+would be wrong. The fix is on the ChainScore side (a paid Etherscan plan),
+which is your call. I haven't verified plan prices, so I'm not quoting one.
+
+This answers your §0.1 question: as written, the rule isn't just
+over-strict, it's total. Scoped this way, a transient failure refuses only
+when it touches a chain the wallet actually borrowed on. The demo shows that
+as UNAVAILABLE plus a retry.
+
+## P2-O3. An independent history check would NOT have caught the 850-with-zero-transactions case
+
+**Brief says (§4a):** the independent history check "is the check that
+catches 850-with-zero-transactions."
+
+**Why it's wrong:** That wallet has *real* Aave borrowing on Arbitrum. The
+bad input was an empty transaction history from Etherscan that ChainScore
+didn't flag.
+
+**Evidence:**
+- Today's re-probe of the same wallet on Arbitrum returns
+  `totalTxns: 188, walletAge: 801, protocolsUsed: ["Aave"]`, score 850.
+- In Phase 0 the same call returned `totalTxns: 0` with no degraded source.
+- An independent borrowing check passes this wallet in both cases.
+
+**Instead:** add an **internal-consistency check (4e)** alongside 4a. For
+any chain where ChainScore returns a score from borrowing history,
+`totalTxns > 0` and `walletAge > 0` are required. Otherwise the transaction
+source failed silently, so the result is UNAVAILABLE for that chain. Keep 4a
+for what it actually catches: ChainScore saying "no borrow history" or "new
+wallet" where borrowing really exists, or scoring a chain with none.
+
+## P2-O4. The independent history check is feasible for free, with two caveats
+
+**Brief asks (§0.1, §4a):** is an independent borrowing check feasible
+without a paid data provider?
+
+**Answer: yes, via Envio HyperSync's free tier.** It needs an Envio account
+and API token, which only you can create at `envio.dev/app/api-tokens`.
+
+- **Coverage:** HyperSync natively serves all 7 chains: 1, 42161, 10, 8453,
+  137, 43114 and 534352 (docs.envio.dev, supported networks).
+- **Aave V2/V3:** `Borrow(address indexed reserve, address user, address
+  indexed onBehalfOf, …)`. `onBehalfOf` is indexed (verified in
+  `aave/aave-v3-core` `IPool.sol`), so it's one filtered log query per pool
+  over the full history.
+- **Compound V2:** `Borrow(address borrower, …)` has **no indexed fields**
+  (verified in `compound-protocol` `CTokenInterfaces.sol`), so it can't be
+  filtered by borrower. The approximation is transactions *from* the wallet
+  *to* a cToken calling `borrow(uint256)`. **It misses borrows made through
+  a contract** (DeFi Saver, Instadapp, a Safe). This is documented as a
+  false-negative source.
+- **Cost:** $0 on the free plan ("fair-use based rate limiting"). If we hit
+  limits, Starter is $70/month for 100 requests/minute (envio.dev pricing
+  page).
+- **What "independent" means here:** independent of ChainScore's pipeline
+  (different provider, raw logs rather than ChainScore's subgraphs), not of
+  the chain itself.
+- **Addresses:** pool and cToken addresses come from the official Aave
+  address book and Compound's deployments, fetched rather than remembered.
+
+**Rejected alternatives:**
+- Public-RPC `eth_getLogs`: block-range limits make full-history scans
+  impractical.
+- The Graph: it's the *same* source ChainScore uses, so not independent, and
+  it needs a key.
+
+**Needed from you:** an Envio HyperSync API token.
+
+## P2-O5. The "aggregation consistency" rule (4d) would throw away the signal the min rule exists for
+
+**Brief says (§4d):** refuse unless per-chain scores are "consistent enough
+to aggregate".
+
+**Why it's wrong:** Under a minimum rule, scores that disagree across chains
+are usually information, not error. Clean on Arbitrum and liquidated on
+Polygon is exactly the wallet the min rule should price low. Refusing it
+shows UNAVAILABLE (floor terms, no score) and hides *why*.
+
+**Instead:** define consistency *per chain*, as agreement between ChainScore
+and the independent check:
+
+- ChainScore says no borrowing or new wallet, but borrowing exists on that
+  chain: **UNAVAILABLE**. ChainScore is missing data.
+- ChainScore scores a chain where no borrowing exists: **UNAVAILABLE**.
+  ChainScore reports something we can't corroborate.
+- Otherwise the chain counts, and the min is taken over the counted chains.
+  Disagreement *between* chains is shown in the per-chain breakdown, not
+  refused.
+
+## P2-O6. The nonce requirement and "never cache signatures" pull against each other
+
+**Brief says (§8):** "Two concurrent requests for one wallet must never
+produce two signatures on one nonce", and "cache scores, never signatures."
+
+**Why it needs care:**
+
+- **Why it matters:** two *different* payloads on the same nonce let a
+  wallet pick the better one.
+- **Identical re-signing is harmless:** the same payload signed twice gives
+  identical bytes, because viem's secp256k1 signing uses deterministic
+  RFC 6979 nonces. I'll prove this in a test rather than assume it.
+- **What "concurrent" means in production:** requests hitting separate
+  serverless instances, so an in-process lock proves nothing.
+
+**Instead:**
+
+- Keep a **payload reservation** per (wallet, nonce), valid until its
+  15-minute submit deadline. A second request re-signs the *reserved
+  payload*, producing the identical signature, instead of building a new
+  one. Only the payload is stored, never a signature.
+- After the deadline passes unused, a new payload may be reserved.
+- The reservation lives in the shared store (P2-O9) and is claimed with an
+  atomic insert-if-absent.
+
+## P2-O7. "Never issue an attestation the registry will reject" can't be guaranteed; the precise version can
+
+**Brief says (§8):** re-check `lastLiquidatedAt` and "never issue an
+attestation the registry will reject."
+
+**Why it's wrong:** Things can land between signing and submission and make
+the registry reject a valid signature: a liquidation, another attestation
+advancing the nonce, or the deadline passing. That's the registry doing its
+job.
+
+**Instead:** "never issue an attestation that the registry would reject
+*against chain state at signing time*". Rejections after that are the
+registry enforcing policy, and the UI explains them.
+
+**A related trap: `issuedAt` must be the upstream *data* time**, not our
+signing time:
+
+- ChainScore v1 envelopes can be cached, or served as a last-known-good
+  result up to 7 days old when providers fail (`stale`, `cached`, `asOf`,
+  `computedAt` fields).
+- We take `issuedAt` from ChainScore's `computedAt` and refuse `stale: true`.
+- If `computedAt ≤ lastLiquidatedAt`, we bypass our cache and fetch fresh.
+  If it's still ≤, the result is UNAVAILABLE.
+
+## P2-O8. Which ChainScore endpoint: the v1 API needs a key that only you can mint
+
+**Brief says (§3):** call chainscore.dev. It doesn't say which endpoint.
+
+**Evidence:**
+
+| Endpoint | Auth | Limits | Notes |
+|---|---|---|---|
+| Legacy `GET /api/score/[address]` | none | `x-ratelimit-remaining` fell 19 → 14 over 6 probes, so about 20 per window per IP | deprecated (`Deprecation: true` header); serverless egress IPs are shared |
+| v1 `GET /api/v1/score/[address]` | `Bearer cs_live_…` | free plan: **1,000 scores/month, 30/minute** (`lib/pricing/plans.ts`) | returns `computedAt`, `stale`, `cached`, integrity penalty |
+
+**Instead:**
+
+- Use **v1**, with a key minted by you:
+  `npx tsx scripts/mintApiKey.ts "Tenor" 120` against the production
+  database.
+- Give that key a non-free plan row, since it's your database. At 7 chains
+  per attestation, the free plan allows about 140 attestations a month.
+- With P2-O2's scoping, we only call ChainScore for chains where borrowing
+  exists, typically 1–2 calls per attestation, not 7.
+
+**Naming:** the "ChainScore score" is v1's `score`, which includes
+ChainScore's own integrity penalty. `modelScore` is logged alongside it.
+
+**Needed from you:** the v1 API key.
+
+## P2-O9. The service needs a shared store, which the brief never names
+
+**Brief says:** rate limits, a score cache, nonce safety, and a refusal log
+"queryable for the demo". It names no store.
+
+**Why it matters:** in a serverless deployment, in-memory state is
+per-instance. None of those four features work without shared storage.
+
+**Instead:**
+
+- A storage interface with two implementations:
+  - **in-memory**, for unit tests and the local end-to-end run;
+  - **Postgres**, for deployment. You already have Supabase.
+- Postgres gives the refusal log as a table (`GET /refusals` for the demo),
+  and a unique constraint on (wallet, nonce) for P2-O6.
+- The service core is a framework-free TypeScript library, with a small HTTP
+  adapter for local runs. Phase 3 mounts the same core in Next.js route
+  handlers, so there is one implementation.
+
+**Needed from you:** confirm Supabase Postgres. A new project, separate from
+ChainScore's, is recommended.
+
+## P2-O10. Section 6 names a field that doesn't exist; a proposed penalty scale
+
+- **The field:** the registry has `shortfallCount`, not `defaultCount`
+  (per O2 and CONTRACTS.md).
+- **Proposed penalty (policy placeholder, in the model's own units):**
+  ChainScore's score band is points-to-double-odds with PDO = 72.2
+  (`model_meta.json`), so 72 points means "double the odds of
+  liquidation".
+  - **Each Tenor liquidation in the last 180 days:** −72 points, up to 3
+    (−216).
+  - **Any shortfall in the last 180 days:** the Tenor score is capped at 451
+    (FLOOR).
+  - Example: an 800 wallet liquidated once drops to 728 (tier A to B); with
+    a shortfall it drops to FLOOR. The drop is unmistakable, and every step
+    is itemized.
+
+## P2-O11. §9's "service refuses to reissue it" needs precision, or it breaks the feedback loop
+
+**Brief says (§9):** after a liquidation, "confirm the service refuses to
+reissue [the pre-liquidation attestation]."
+
+**Why it's wrong as worded:** The service should never re-serve a payload
+from *before* the liquidation (enforced by P2-O7). But it must **issue a new,
+penalized attestation from post-liquidation data**. That's step 7 of the
+approved journey (re-attest at a lower score). A flat refusal would stop the
+loop.
+
+**Instead, the test asserts three things:**
+1. The old signature is rejected on-chain.
+2. The service's next response has `issuedAt > lastLiquidatedAt` and
+   carries the penalty.
+3. That new attestation is accepted on-chain at the lower tier.
+
+## P2-O12. The distribution check is blocked by the HyperSync token, not by Q5, and SCORED end to end doesn't need Q5 at all
+
+**Brief says (§2):** the distribution check and "genuinely scoreable" paths
+are blocked on Q5.
+
+**Why it's wrong:**
+
+- **Distribution check:** it needs *read-only* multi-chain borrowers.
+  HyperSync can find them (wallets with Aave `Borrow` logs on 2 or more
+  chains). ChainScore's own `ml/features.csv` also lists 2,995 historical
+  borrower addresses to use as read-only test subjects. The data file stays
+  in `_reference/`; nothing is shipped. The blocker is the HyperSync token
+  (P2-O4), and the whole check should take under an hour once it arrives.
+- **SCORED end to end:** `submitAttestation` is permissionless, and anvil
+  can impersonate any address. So the full path works on local anvil
+  **with a public real borrower's address**: score from the live upstream,
+  sign, submit, read back, borrow as that address, liquidate, re-attest.
+- **What Q5 still blocks:** only the *testnet demo*, where a real key must
+  sign in a browser. That's Phase 4, as you said.
+
+## Answers to §0.1
+
+| Question | Answer |
+|---|---|
+| Is the min rule too flat? | Unknown until the distribution check runs. It needs the HyperSync token, not Q5, and uses public borrowers (P2-O12). If it collapses to FLOOR, I bring it to you before continuing. |
+| TTL | **Keep 24 h.** The exposure it leaves open: a wallet liquidated on Aave or Compound keeps its Tenor terms until expiry, bounded by the caps in CONTRACTS.md §9.1. A shorter TTL adds friction twice: users re-attest more often, and every re-attestation spends ChainScore quota (P2-O8). With 1–2 calls each, 24 h is sustainable; 6 h would roughly quadruple quota use for a window Tenor can't observe anyway. Tenor's own liquidations are already covered instantly on-chain. |
+| Independent history check | Feasible for free with a HyperSync token; Compound V2 is approximate (P2-O4). |
+| Refusal when degraded | Over-strict as written: total, in fact (P2-O2). Scoped to chains with verified borrowing, it's correct. |
+
+## What I need from you before Phase 2 code
+
+1. Git identity (for commits).
+2. An Envio HyperSync API token.
+3. A ChainScore v1 API key minted for Tenor, preferably on a non-free plan
+   row.
+4. Confirm Supabase Postgres for the service store (a new project).
+
+Meanwhile, with your OK, I can do the deploy script and dry-run (Phase 1
+remainder), the refusal layer, the three states, the aggregation interface,
+the signing, the nonce reservations and the in-memory store. All of that is
+testable without any of the four items above.
