@@ -1,0 +1,335 @@
+{
+ "_source": "Live HyperSync results recorded by packages/attestor/scripts/distribution.ts, run 2, 2026-09-23 (docs/distribution/pipeline-2026-09-23.jsonl). Replayed only in local fixture mode; responses are labelled FIXTURE.",
+ "wallets": {
+  "0x0bcf9c69c930ff32a372f8d66c3466dc87bc59cb": {
+   "ethereum": {
+    "aaveBorrows": 8,
+    "compoundBorrows": 71
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x0a1187b46f6cf98a11811d60f891f56e3e5dbf6a": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 2
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x05cd35a430949c1bf475e17b67c4167ebdd3f04b": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 1
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x092ad005d2a0e9706754d1c93c2c4339145b24f8": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 1
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x07e782619a09db56e905b335d81c8ecd454fa408": {
+   "ethereum": {
+    "aaveBorrows": 1,
+    "compoundBorrows": 6
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x0527ff8a33cf099a8e86fbf2171f37c06dcf36c2": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 1
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x057518153ed7f25dd237a0d0052ae8cc5c428ee3": {
+   "ethereum": {
+    "aaveBorrows": 48,
+    "compoundBorrows": 34
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x033bd44b29375c02d07d8313a90eaae94337dcbf": {
+   "ethereum": {
+    "aaveBorrows": 1,
+    "compoundBorrows": 0
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x0222ba0731fa7f3c3652180a6fecef7075b632ad": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 6
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x028d49cfc1ef0f86fe6ac9e728cb898cb54ae792": {
+   "ethereum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 2
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  },
+  "0x00f282c40b92bed05f1776cadf1c8b96b9fbaee3": {
+   "ethereum": {
+    "aaveBorrows": 2,
+    "compoundBorrows": 4
+   },
+   "arbitrum": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "optimism": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "polygon": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "base": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "avalanche": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   },
+   "scroll": {
+    "aaveBorrows": 0,
+    "compoundBorrows": 0
+   }
+  }
+ }
+}

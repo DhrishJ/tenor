@@ -51,9 +51,20 @@ describe('three states', () => {
     const t = makeService({ history: new FakeHistory(h) })
     const r = await t.service.attest(WALLET, 'req-1')
     expect(r.state).toBe('UNAVAILABLE')
-    if (r.state === 'UNAVAILABLE') expect(r.reason).toContain('History verification unavailable')
+    if (r.state === 'UNAVAILABLE') expect(r.reason).toContain('no borrowing-history source answered (tried HyperSync and Alchemy fallback)')
     expect(t.chainscore.calls).toEqual([])
     expect(t.signCalls()).toBe(0)
+  })
+})
+
+describe('refusal wording names only sources actually tried', () => {
+  it('HyperSync only (no fallback configured): does not claim Alchemy was tried', async () => {
+    const h = noHistory()
+    for (const k of Object.keys(h) as Array<keyof typeof h>) h[k] = { ok: false, error: 'fetch failed', attempted: ['hypersync'] }
+    const r = await makeService({ history: new FakeHistory(h) }).service.evaluate(WALLET, 'req-1')
+    if (r.state !== 'UNAVAILABLE') throw new Error(r.state)
+    expect(r.reason).toContain('(tried HyperSync)')
+    expect(r.reason).not.toContain('Alchemy')
   })
 })
 

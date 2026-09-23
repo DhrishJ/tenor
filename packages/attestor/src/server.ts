@@ -10,6 +10,7 @@ import { ViemRegistryReader } from './registry.js'
 import { AttestationService } from './service.js'
 import { AttestationSigner } from './signer.js'
 import { MemoryStore } from './store.js'
+import { FixtureHistoryChecker } from './fixtureHistory.js'
 
 const cfg = loadConfig()
 const client = createPublicClient({ transport: http(cfg.rpcUrl) })
@@ -23,9 +24,19 @@ if (signer.address !== cfg.expectedAttestor) {
 }
 
 const hypersync = new HyperSyncHistoryChecker({ apiToken: cfg.envioToken })
-const history: HistoryChecker = cfg.alchemyKey
-  ? new FallbackHistoryChecker(hypersync, new AlchemyHistorySource({ apiKey: cfg.alchemyKey }))
-  : hypersync
+const fixture = cfg.historyFixture ? new FixtureHistoryChecker(cfg.historyFixture) : undefined
+if (fixture && cfg.chainId !== 31337) {
+  jsonLogger.error('fixture_on_non_local_chain', { chainId: cfg.chainId })
+  process.exit(1)
+}
+const history: HistoryChecker = fixture
+  ? fixture
+  : cfg.alchemyKey
+    ? new FallbackHistoryChecker(hypersync, new AlchemyHistorySource({ apiKey: cfg.alchemyKey }))
+    : hypersync
+const notice = fixture
+  ? `FIXTURE: borrowing history replayed from a recording, not queried live. ${fixture.source} ChainScore scores are live.`
+  : undefined
 
 const store = new MemoryStore()
 const registry = new ViemRegistryReader(client, cfg.registry)
@@ -91,6 +102,8 @@ const app = createApp({
   health,
   rateLimitPerIp: cfg.rateLimitPerIp,
   rateLimitPerAddress: cfg.rateLimitPerAddress,
+  corsOrigins: cfg.corsOrigins,
+  notice,
 })
 
 serve({ fetch: app.fetch, port: cfg.port })

@@ -20,6 +20,10 @@ const envSchema = z.object({
   SCORE_TTL_SECONDS: z.coerce.number().int().positive().max(172_800).default(86_400),
   SUBMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
   PORT: z.coerce.number().int().positive().default(8787),
+  /** Comma-separated browser origins allowed to call the service. */
+  CORS_ORIGINS: z.string().default(''),
+  /** LOCAL DEVELOPMENT ONLY: path to a recorded-history fixture. Every response is then labelled FIXTURE. */
+  HISTORY_FIXTURE: z.string().optional(),
   RATE_LIMIT_PER_IP_PER_MIN: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_PER_ADDRESS_PER_MIN: z.coerce.number().int().positive().default(6),
 })
@@ -47,6 +51,8 @@ export interface Config {
   scoreTtlSeconds: number
   submitWindowSeconds: number
   port: number
+  corsOrigins: string[]
+  historyFixture: string | undefined
   rateLimitPerIp: number
   rateLimitPerAddress: number
 }
@@ -70,6 +76,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     scoreTtlSeconds: e.SCORE_TTL_SECONDS,
     submitWindowSeconds: e.SUBMIT_WINDOW_SECONDS,
     port: e.PORT,
+    corsOrigins: e.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
+    historyFixture: e.HISTORY_FIXTURE,
     rateLimitPerIp: e.RATE_LIMIT_PER_IP_PER_MIN,
     rateLimitPerAddress: e.RATE_LIMIT_PER_ADDRESS_PER_MIN,
   }

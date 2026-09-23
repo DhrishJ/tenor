@@ -3,6 +3,7 @@
  * shapes. All decisions live in service.ts.
  */
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { getAddress, isAddress, type Address } from 'viem'
 import type { AttestationService } from './service.js'
 import type { Store } from './store.js'
@@ -21,6 +22,9 @@ export interface HttpDeps {
   rateLimitPerIp: number
   rateLimitPerAddress: number
   now?: () => number
+  corsOrigins?: string[]
+  /** Added to every scoring response when set (e.g. fixture mode). */
+  notice?: string
 }
 
 const WINDOW_MS = 60_000
@@ -28,6 +32,8 @@ const WINDOW_MS = 60_000
 export function createApp(d: HttpDeps) {
   const app = new Hono()
   const now = d.now ?? Date.now
+  const notice = d.notice ? { notice: d.notice } : {}
+  if (d.corsOrigins?.length) app.use('*', cors({ origin: d.corsOrigins, allowMethods: ['GET', 'POST'] }))
 
   app.use('*', async (c, next) => {
     const requestId = c.req.header('x-request-id') ?? crypto.randomUUID()
@@ -59,7 +65,7 @@ export function createApp(d: HttpDeps) {
     if (why) return c.json({ error: why }, 429)
     const requestId = c.get('requestId' as never) as string
     const result = await d.service.attest(wallet, requestId)
-    return c.json({ requestId, ...result }, result.state === 'UNAVAILABLE' ? 503 : 200)
+    return c.json({ requestId, ...notice, ...result }, result.state === 'UNAVAILABLE' ? 503 : 200)
   })
 
   app.get('/score/:address', async (c) => {
@@ -70,7 +76,7 @@ export function createApp(d: HttpDeps) {
     if (why) return c.json({ error: why }, 429)
     const requestId = c.get('requestId' as never) as string
     const result = await d.service.evaluate(wallet, requestId, 'score')
-    return c.json({ requestId, ...result }, result.state === 'UNAVAILABLE' ? 503 : 200)
+    return c.json({ requestId, ...notice, ...result }, result.state === 'UNAVAILABLE' ? 503 : 200)
   })
 
   /** Every refusal with its reason: the live answer to "what happens if the data is bad?". */

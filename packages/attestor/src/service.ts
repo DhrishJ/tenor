@@ -232,7 +232,7 @@ export class AttestationService {
     if (COVERED_CHAINS.every((c) => !history[c.slug].ok)) {
       return {
         state: 'UNAVAILABLE',
-        reason: 'History verification unavailable: neither HyperSync nor the Alchemy fallback answered. Not a low score; try again.',
+        reason: `History verification unavailable: no borrowing-history source answered (tried ${attemptedSources(history)}). Not a low score; try again.`,
         chains: COVERED_CHAINS.map((c) => {
           const h = history[c.slug]
           return { chain: c.slug, name: c.name, reason: h.ok ? 'checked' : `history check failed: ${h.error}` }
@@ -419,6 +419,17 @@ export class AttestationService {
       if (this.locks.get(key) === tail) this.locks.delete(key)
     }
   }
+}
+
+/** The history sources that were actually tried, for honest refusal messages. */
+function attemptedSources(history: Record<ChainSlug, ChainHistory>): string {
+  const names = { hypersync: 'HyperSync', alchemy: 'Alchemy fallback' } as const
+  const tried = new Set<keyof typeof names>()
+  for (const c of COVERED_CHAINS) {
+    const h = history[c.slug]
+    if (!h.ok) h.attempted.forEach((a) => tried.add(a))
+  }
+  return [...tried].map((t) => names[t]).join(' and ') || 'none'
 }
 
 function summarize(history: Record<ChainSlug, ChainHistory>): HistorySummary {
