@@ -1,0 +1,19 @@
+# Prior art: read-only reference clone, never part of this repo
+_reference/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# Build outputs
+contracts/out/
+contracts/cache/
+node_modules/
+dist/
+
+# Local-only deploy broadcasts (testnet broadcasts are committed deliberately)
+contracts/broadcast/*/31337/
