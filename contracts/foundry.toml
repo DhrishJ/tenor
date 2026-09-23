@@ -1,0 +1,49 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+
+solc_version = "0.8.36"
+# Monad supports all opcodes through Fusaka (docs.monad.xyz, summary). We pin an
+# older target on purpose: nothing here needs newer opcodes.
+evm_version = "prague"
+optimizer = true
+optimizer_runs = 200
+# OpenZeppelin 5.6.1 names a local `error`, which solc 0.8.36 warns about. Upstream
+# code, not ours: silence warnings from lib/ only.
+ignored_warnings_from = ["lib/"]
+
+# Monad execution rules (gas model, opcode pricing, size limits) for local runs.
+# Requires Foundry >= 1.8.0 (docs.monad.xyz/tooling-and-infra/toolkits/foundry).
+network = "monad"
+
+# Source verification settings. Monad's verify guide
+# (docs.monad.xyz/guides/verify-smart-contract/foundry) lists `metadata = true` and
+# `metadata_hash = "none"`, but Foundry 1.8.3 rejects both keys as unknown. The
+# Foundry equivalents are below: keep the CBOR metadata, drop the IPFS hash.
+cbor_metadata = true
+bytecode_hash = "none"
+use_literal_content = true
+
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "forge-std/=lib/forge-std/src/",
+]
+
+[fuzz]
+runs = 10000
+
+[invariant]
+runs = 256
+depth = 100
+# Handlers wrap every market call in try/catch; any other revert is a handler bug.
+fail_on_revert = true
+
+[rpc_endpoints]
+monad_testnet = "${MONAD_TESTNET_RPC_URL}"
+
+[lint]
+# Lints are reviewed explicitly with `forge lint` (see CONTRACTS.md), not on every build.
+lint_on_build = false
