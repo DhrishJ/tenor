@@ -810,3 +810,279 @@ requirements:
 legacy adapter (it needs no credentials, so it's testable now). Switching to
 v1 is a one-file change. **Needs your confirmation.** It also means **no
 ChainScore API key or Vercel login is needed.**
+
+---
+
+# Phase 3: Indexer and frontend, plus the bounty addendum (raised 2026-09-22)
+
+## P3-O1. Gate claim: "Tier cap on liquidation implemented" is false
+
+**Evidence:** `packages/attestor/src/policy.ts` has three rules:
+`tenor-liquidation` (−72 per liquidation), `tenor-shortfall-cap` (451 on
+shortfall), and `range-clamp`. At the Phase 2 gate I proposed a tier cap
+after a liquidation as an *option* and said "I haven't changed it."
+
+**Instead:** confirm the rule. My proposal: after any Tenor liquidation
+within 180 days, the Tenor score is capped at 642, the top of tier C. Once
+confirmed, it's a small policy change with tests. See P3-O2 for how it is
+displayed.
+
+## P3-O2. A tier cap can't be "shown rather than folded into the number" on-chain; it can in the UI
+
+**Brief says (3.1):** show "any tier cap … as a policy cap rather than folded
+into the number."
+
+**Why it needs care:** the registry derives the tier from the *signed score*
+(`RiskParams.scoreToTier`). The score is the only channel a cap can travel
+on-chain, so a tier cap has to be enacted as a score ceiling, exactly as the
+shortfall cap already is (851 → 451).
+
+**Instead:**
+- On-chain it stays a score ceiling.
+- In the service response and the UI it is itemized as a **named policy
+  cap**: "Tenor policy cap: tier C maximum for 180 days after a Tenor
+  liquidation", with its point effect. The ChainScore score is shown
+  unchanged next to it.
+- A true separation (an on-chain `tierCap` field alongside the score) would
+  change the Phase 1 contracts and their test suite. Not recommended at this
+  stage.
+
+## P3-O3. The event names in §2 don't match the contracts
+
+**Brief says:** index "AttestationSubmitted, Supply, Withdraw, Borrow, Repay,
+Liquidate, ShortfallRecorded".
+
+**Evidence (CONTRACTS.md and the ABIs):** the real events are:
+- ScoreRegistry: `AttestationSubmitted`, `LiquidationRecorded`,
+  `AttestorRotated`, `MarketSet`.
+- TenorMarket:
+  - lenders: ERC-4626 `Deposit` and `Withdraw`;
+  - borrowers: `CollateralDeposited`, `CollateralWithdrawn`, `Borrowed`,
+    `Repaid`, `Liquidated`, `BadDebtRealized`, `Retiered`;
+  - market: `InterestAccrued`, `CapsSet`.
+- "Score and terms at the time" is carried by `Borrowed` and `Liquidated`
+  (score, tier, LTV/LT, price). There is no `ShortfallRecorded`: shortfall is
+  in `Liquidated.shortfall`, `BadDebtRealized` and `LiquidationRecorded`.
+
+**Instead:** index all of the above.
+
+## P3-O4. The indexer is for history; current state must come from the chain
+
+**Brief says (§2):** "Keep derived aggregates in the indexer rather than
+recomputing client-side", and "each screen needs one query".
+
+**Why it's wrong for *current* numbers:** debt, health factor, `maxBorrow`
+and `totalAssets` change every second through interest accrual. An indexer
+only sees events. Recomputing accrued interest there would duplicate the
+contract's rounding logic and drift from it. Showing a health factor the
+contract disagrees with is the fastest way to lose a judge.
+
+**Instead:**
+- **Indexer (one GraphQL query per screen):** history and aggregates:
+  attestation history, liquidations feed, the per-wallet loop timeline,
+  market activity, counts and totals of events.
+- **Chain (one multicall per screen):** current state: position, debt,
+  health factor, `maxBorrow`, score freshness. This is not "querying the
+  chain for historical data", which the original brief rightly forbids.
+
+For the bounty, HyperIndex is still load-bearing: without it there is no
+liquidations feed, no loop timeline, and no attestation history.
+
+## P3-O5. No separate direct-RPC read path is needed; HyperIndex already has one
+
+**Brief asks (§0.1, §2):** is a direct-RPC fallback worth building?
+
+**Evidence:** Envio's config schema: `rpc: [{ url, for: fallback }]`, "for
+chains supported by HyperSync, RPC serves as a fallback for added
+reliability" (docs.envio.dev, config-schema-reference).
+
+**Instead:** configure the Monad testnet RPC as `for: fallback` in the
+indexer. Current-state values already come from the chain (P3-O4). Nothing
+extra to build.
+
+## P3-O6. Envio Cloud's free tier can carry judging, with two operational duties
+
+**Evidence** (docs.envio.dev, hosted-service-deployment, "Development Plan
+Fair Usage Policy"):
+- **Hard limits:** 20 GB of storage, 30 days of age.
+- **Soft limits, whichever comes first:** 100,000 events processed, 5 GB, or
+  **no requests for 7 days**.
+
+**Assessment:**
+- **Events:** our volume is small. Even busy testnet use is in the
+  thousands.
+- **Age:** deploying on Oct 7 gives an Oct 7 → Nov 6 lifetime, which covers
+  judging (Oct 14–27) and winners (Nov 3).
+- **The idle rule is the real risk.** If no one queries for 7 days during
+  judging, deletion starts.
+
+**Instead:** a scheduled keep-alive query every 24 h from Phase 4, and a
+redeploy on Oct 12 to reset the 30-day clock. Self-hosting (`envio start`)
+remains the fallback.
+
+## P3-O7. The Alchemy fallback as specified is not feasible on Alchemy's free plan; here's what is
+
+**Addendum says (1.2):** Alchemy is the second history source: "falls back to
+Alchemy", and "the SCORED path still completes through Alchemy."
+
+**Evidence:**
+- Alchemy `eth_getLogs` on the **Free** plan: **a 10-block range**; Pay As
+  You Go is unlimited (alchemy.com/docs, eth-getlogs). A full-history borrow
+  scan is impossible on free.
+- `alchemy_getAssetTransfers` (120 CU per call, full history, paged) covers
+  **Ethereum, Base, Polygon, Arbitrum and Optimism only**; Avalanche and
+  Scroll aren't listed (alchemy.com/docs, alchemy-getassettransfers).
+- **Compound V2 can't be read this way.** A borrow and a redeem both move the
+  underlying from the cToken to the wallet, so transfer data can't tell them
+  apart.
+
+**What is feasible for free:**
+- **Aave V3/V2 on those 5 chains**, detected as **variable/stable debt-token
+  mints to the wallet** via `getAssetTransfers` (category `erc20`,
+  `contractAddresses` = the chain's Aave debt tokens, from the Aave address
+  book). A borrow mints debt tokens to `onBehalfOf`, so this is the same
+  fact the HyperSync check reads, from a different provider.
+- **Not covered by the fallback:** Avalanche, Scroll, and Compound V2 on
+  Ethereum.
+
+**This forces a clear definition of "partial verification"** (which the
+addendum rightly asks for):
+- A chain or protocol verified by at least one source counts as normal.
+- A chain or protocol **no source could verify** (for example Scroll while
+  HyperSync is down) is marked **unverified**. ChainScore's own per-chain
+  view is used for it:
+  - If ChainScore sees borrowing there, that chain's score is counted,
+    which can only lower the minimum. It can't be cherry-picked.
+  - If ChainScore sees none, the chain is excluded and labelled
+    "unverified: independent check unavailable".
+- The response state is SCORED with `verification: "partial"`, and the UI
+  names the unverified chains.
+- This never collapses to total refusal, and never silently counts
+  something unverified as verified.
+
+**Cost:** $0 on Alchemy Free (30M CU/month; about 7 × 120 CU per wallet).
+**Needed from you:** an Alchemy account and API key. I have none, and making
+one needs your email.
+
+**Bounty consequence:** Alchemy becomes load-bearing only *while HyperSync is
+down*. By the addendum's test (removing it breaks a demonstrated feature), it
+qualifies only if the demo actually shows the fallback answering, for example
+a filmed forced-failure run. Otherwise it's USED, not CLAIMED.
+
+## P3-O8. Using ChainScore's view for unverifiable chains changes what "independent" means; say so
+
+Following P3-O7: when a chain is unverified, Tenor falls back to trusting
+ChainScore's own "no borrowing here" for it. The README must say that
+partial verification exists, when it happens, and that it is shown per
+chain.
+
+## P3-O9. Five screens become four pages; the loop needs its own
+
+**Brief says (§3):** five screens, 3.1–3.5.
+
+**Instead:**
+1. **/score**: connect, three states, itemization, then attest (3.1 and 3.2
+   are one flow; splitting them adds a navigation step to the filmed
+   journey).
+2. **/compare**: the pitch (3.3).
+3. **/market**: supply, borrow, repay and position with a live health factor
+   (3.4 and the position half of 3.5 act on the same position; one page).
+4. **/activity**: the liquidations feed plus a **per-wallet loop timeline**
+   (liquidation, score invalidated, new penalized score, smaller capacity),
+   one indexer query.
+
+Same scope, fewer clicks in a 3-minute video.
+
+## P3-O10. The comparison must show which limit binds, or it overstates the score's effect
+
+**Brief says (3.3):** lead with the borrow-amount difference.
+
+**Why it needs care:** at meaningful collateral, FLOOR's **per-wallet cap
+(1,000 tUSD) binds before its 60% LTV** (Phase 1 journey test). At $2,000 of
+collateral, tier A borrows 1,600 while FLOOR borrows 1,000. Only 200 of that
+600 difference comes from LTV (1,200 vs 1,600 would be the LTV-only
+comparison, a 400 difference); the rest comes from the cap. A judge who
+checks the maths sees the pitch's "the score governs collateral" is half cap.
+
+**Instead:**
+- The comparison shows, per wallet, **LTV limit, cap limit, and which one
+  binds**.
+- The default collateral is chosen where **no cap binds** (≤ $1,666 for
+  FLOOR, for example 800 tCOLL = $1,600 → A 1,280 vs FLOOR 960). The currency
+  difference is then purely LTV.
+- A slider shows where caps take over.
+
+## P3-O11. I can't walk the journey with a real wallet extension; here's the honest split
+
+**Brief says (§5):** walk the full journey yourself in a browser.
+
+**Why it's limited:** I can drive a browser, but I can't operate a
+wallet-extension signature prompt, and I won't put a private key into one.
+
+**Instead:**
+- **(a)** A development-only wagmi *mock connector* that uses anvil's
+  unlocked or impersonated accounts. It works only against a local anvil and
+  is compiled out of production builds. I walk the whole journey with it and
+  report every break.
+- **(b)** You do a real-wallet pass on testnet in Phase 4.
+- The impersonation rule from Phase 2 still holds: never filmed.
+
+## P3-O12. Running the indexer against testnet needs a testnet deploy, which needs faucet MON
+
+**Brief says (§2):** confirm the indexer "catches up from the deployment
+block and stays current."
+
+**Evidence:** HyperSync supports 10143, not a local anvil (31337); locally
+HyperIndex would run in RPC mode. The faucet page (`faucet.monad.xyz`) is a
+JavaScript app, and I couldn't read its requirements or rate limit.
+
+**Instead:**
+- Build and verify the indexer locally (RPC mode) first.
+- Do an **early testnet deploy during Phase 3** with a fresh throwaway
+  deployer, to test the indexer on real Monad and surface faucet and RPC
+  limits (your Phase 4 note) before they matter. We're about 10 days ahead
+  of schedule, so this costs nothing.
+- **Needed from you:** fund the throwaway deployer from the faucet. It may
+  need a browser, a captcha or a social login; I'll give you the address.
+
+## P3-O13. The distribution check, done now with a labelled substitute
+
+**Brief says (§1):** run it "as soon as HyperSync is reachable". It has been
+unreachable since about 22:10.
+
+**Instead (running now, read-only):** 50 historical borrowers sampled from
+ChainScore's `features.csv` (seeded, reproducible). ChainScore itself decides
+which chains each wallet borrowed on (`protocolsUsed`, `noBorrowHistory`),
+all 7 chains per wallet. Tenor's validation rules are then applied offline
+to classify SCORED, UNAVAILABLE or INSUFFICIENT_HISTORY.
+
+**Labelled limitations:**
+- Discovery is ChainScore's, not independent.
+- On Base and Aave-degraded chains, borrowing can't be seen at all, which
+  is reported as its own count.
+- The sample comes from an older dataset.
+
+It will be rerun through the real pipeline once HyperSync is back.
+
+## P3-O14. Bounty addendum items I can't do from here
+
+- **Perpl terms (2.2)** and **the platform's full bounty list (§4)** are
+  behind the hackathon portal login. **Needed from you:** paste them, or the
+  relevant sections.
+- **Nansen (2.1):** DECLINED for now. Its own preconditions aren't met: the
+  distribution check hasn't been run through the pipeline, and the second
+  history source hasn't shipped. It gets re-evaluated only if both clear
+  early.
+- **Separate bounty submission steps (§5):** also behind the portal. The
+  same request.
+
+## Assumptions I'm least confident about in these objections
+
+1. **P3-O7's debt-token approach** assumes Alchemy's `getAssetTransfers`
+   indexes Aave debt-token mints. Debt tokens emit `Transfer` on mint but
+   aren't transferable. It's plausible but unverified until I have a key; I'll
+   test it on the known Arbitrum borrower first.
+2. **P3-O13's substitute** may overstate UNAVAILABLE on Base and Optimism,
+   because ChainScore's Aave source is also degraded on Base, so we can't tell
+   whether those wallets borrowed there. The real pipeline, with independent
+   history, resolves this.
