@@ -9,6 +9,13 @@ import { AttestationSigner } from '../src/signer.js'
 import { MemoryStore } from '../src/store.js'
 import { silentLogger } from '../src/log.js'
 
+/** Every covered chain checked by HyperSync, no borrowing found. */
+function noBorrowingAnywhere(): Record<ChainSlug, ChainHistory> {
+  const r = {} as Record<ChainSlug, ChainHistory>
+  for (const c of COVERED_CHAINS) r[c.slug] = { ok: true, aaveBorrows: 0, compoundBorrows: 0, source: 'hypersync', unverified: [] }
+  return r
+}
+
 export const WALLET: Address = getAddress('0x04383b40611ee9408cb6fb8a6bb0d66b07ca7e09')
 /** Test-only key, derived from a label; controls nothing. */
 export const SIGNER_KEY = keccak256(toHex('tenor attestor unit-test key'))
@@ -21,10 +28,7 @@ export const DOMAIN = {
 export const NOW_MS = 1_790_000_000_000
 
 export function noHistory(): Record<ChainSlug, ChainHistory> {
-  return Object.fromEntries(COVERED_CHAINS.map((c) => [c.slug, { ok: true, aaveBorrows: 0, compoundBorrows: 0 }])) as Record<
-    ChainSlug,
-    ChainHistory
-  >
+  return noBorrowingAnywhere()
 }
 
 export class FakeHistory implements HistoryChecker {
@@ -111,6 +115,6 @@ export function makeService(opts: { history?: FakeHistory; chainscore?: FakeChai
 
 export function withBorrows(chains: Partial<Record<ChainSlug, number>>) {
   const h = noHistory()
-  for (const [c, n] of Object.entries(chains)) h[c as ChainSlug] = { ok: true, aaveBorrows: n ?? 0, compoundBorrows: 0 }
+  for (const [c, n] of Object.entries(chains)) h[c as ChainSlug] = { ok: true, aaveBorrows: n ?? 0, compoundBorrows: 0, source: 'hypersync', unverified: [] }
   return h
 }

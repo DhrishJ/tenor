@@ -37,6 +37,13 @@ import { AttestationSigner } from '../src/signer.js'
 import { MemoryStore } from '../src/store.js'
 import { TIER_INDEX, scoreToTier } from '../src/tiers.js'
 
+/** Every covered chain checked by HyperSync, no borrowing found. */
+function noBorrowingAnywhere(): Record<ChainSlug, ChainHistory> {
+  const r = {} as Record<ChainSlug, ChainHistory>
+  for (const c of COVERED_CHAINS) r[c.slug] = { ok: true, aaveBorrows: 0, compoundBorrows: 0, source: 'hypersync', unverified: [] }
+  return r
+}
+
 const SUBJECT = getAddress('0x04383b40611ee9408cb6fb8a6bb0d66b07ca7e09') // public Arbitrum Aave borrower
 const env = (k: string) => {
   const v = process.env[k]
@@ -77,7 +84,7 @@ const section = (s: string) => console.log(`\n=== ${s} ===`)
 // ------------------------------------------------------------------ history
 class FixtureHistory implements HistoryChecker {
   async check() {
-    const r = Object.fromEntries(COVERED_CHAINS.map((c) => [c.slug, { ok: true, aaveBorrows: 0, compoundBorrows: 0 }])) as Record<ChainSlug, ChainHistory>
+    const r = noBorrowingAnywhere()
     return r
   }
 }
@@ -87,7 +94,7 @@ class SubjectFixtureHistory implements HistoryChecker {
   // became unreachable; they are assumed 0 here and that assumption is printed.
   async check(wallet: Address) {
     const r = await new FixtureHistory().check()
-    if (wallet === SUBJECT) r.arbitrum = { ok: true, aaveBorrows: 3, compoundBorrows: 0 }
+    if (wallet === SUBJECT) r.arbitrum = { ok: true, aaveBorrows: 3, compoundBorrows: 0, source: 'hypersync', unverified: [] }
     return r
   }
 }

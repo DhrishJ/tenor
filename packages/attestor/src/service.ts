@@ -13,8 +13,8 @@ import type { Address, Hex } from 'viem'
 import { minimumRule, type AggregationRule } from './aggregate.js'
 import type { ChainScoreClient } from './chainscore.js'
 import { COVERED_CHAINS, chainBySlug, type ChainSlug } from './coverage.js'
-import type { HistoryChecker } from './history.js'
-import { applyTenorPolicy, type Adjustment } from './policy.js'
+import type { ChainHistory, HistoryChecker, HistorySource } from './history.js'
+import { applyTenorPolicy, type Adjustment, type PolicyCap } from './policy.js'
 import type { RegistryReader } from './registry.js'
 import { modelVersionHash, type Attestation, type AttestationSigner } from './signer.js'
 import type { Store } from './store.js'
@@ -34,6 +34,16 @@ export interface ContributingChain {
   chainscoreScore: number
   aaveBorrows: number
   compoundBorrows: number
+  /** Which independent source verified borrowing here, or 'chainscore-only'
+   *  when no independent source could check this chain (partial verification). */
+  verifiedBy: HistorySource | 'chainscore-only'
+}
+
+export interface HistorySummary {
+  /** 'full': every chain checked by an independent source with no gaps.
+   *  'partial': at least one chain or protocol could not be checked. */
+  verification: 'full' | 'partial'
+  sources: Array<{ chain: ChainSlug; name: string; source: HistorySource | null; unverified: string[]; primaryError?: string }>
 }
 
 export type Evaluation =
@@ -42,9 +52,11 @@ export type Evaluation =
       /** What ChainScore returned, combined across chains by `aggregation`. */
       chainscoreScore: number
       aggregation: { rule: string; description: string }
-      /** Tenor policy adjustments, itemized. Not ChainScore's. */
+      /** Tenor policy point adjustments (the model's units), itemized. Not ChainScore's. */
       adjustments: Adjustment[]
-      /** chainscoreScore + adjustments: the number that is signed. */
+      /** Tenor policy caps (ceilings), itemized separately from adjustments. */
+      policyCaps: PolicyCap[]
+      /** chainscoreScore + adjustments, then capped: the number that is signed. */
       tenorScore: number
       tier: Tier
       /** When ChainScore computed the data (unix seconds), not signing time. */
@@ -53,9 +65,10 @@ export type Evaluation =
       modelVersion: string
       contributingChains: ContributingChain[]
       excludedChains: ChainNote[]
+      history: HistorySummary
     }
-  | { state: 'INSUFFICIENT_HISTORY'; reason: string; excludedChains: ChainNote[] }
-  | { state: 'UNAVAILABLE'; reason: string; chains: ChainNote[] }
+  | { state: 'INSUFFICIENT_HISTORY'; reason: string; excludedChains: ChainNote[]; history: HistorySummary }
+  | { state: 'UNAVAILABLE'; reason: string; chains: ChainNote[]; history?: HistorySummary }
 
 export type AttestResult =
   | (Extract<Evaluation, { state: 'SCORED' }> & {
@@ -212,36 +225,64 @@ export class AttestationService {
 
   private async evaluateInner(wallet: Address, bypassCache: boolean): Promise<Evaluation> {
     const nowMs = this.now()
-    const history = await this.d.history.check(wallet)
+    const history = await this.historyFor(wallet, nowMs, bypassCache)
+    const summary = summarize(history)
 
-    // Our own independent check failed: we cannot know which chains matter.
-    const historyFailures: ChainNote[] = []
-    for (const c of COVERED_CHAINS) {
-      const h = history[c.slug]
-      if (!h.ok) historyFailures.push({ chain: c.slug, name: c.name, reason: `independent history check failed: ${h.error}` })
-    }
-    if (historyFailures.length > 0) {
+    // Nothing could be checked independently anywhere: no basis for a score.
+    if (COVERED_CHAINS.every((c) => !history[c.slug].ok)) {
       return {
         state: 'UNAVAILABLE',
-        reason: `Could not verify borrowing history on ${historyFailures.map((c) => c.name).join(', ')}. Not a low score; try again.`,
-        chains: historyFailures,
+        reason: 'History verification unavailable: neither HyperSync nor the Alchemy fallback answered. Not a low score; try again.',
+        chains: COVERED_CHAINS.map((c) => {
+          const h = history[c.slug]
+          return { chain: c.slug, name: c.name, reason: h.ok ? 'checked' : `history check failed: ${h.error}` }
+        }),
+        history: summary,
       }
     }
 
     const excluded: ChainNote[] = []
-    const borrowed: Array<{ slug: ChainSlug; aave: number; compound: number }> = []
+    const failures: ChainNote[] = []
+    // Chains ChainScore must score, and how each was verified.
+    const toScore: Array<{ slug: ChainSlug; aave: number; compound: number; verifiedBy: ContributingChain['verifiedBy'] }> = []
+
     for (const c of COVERED_CHAINS) {
       const h = history[c.slug]
-      if (!h.ok) continue
-      if (h.aaveBorrows + h.compoundBorrows > 0) borrowed.push({ slug: c.slug, aave: h.aaveBorrows, compound: h.compoundBorrows })
-      else excluded.push({ chain: c.slug, name: c.name, reason: 'no Aave or Compound borrowing found on-chain' })
+      const borrows = h.ok ? h.aaveBorrows + h.compoundBorrows : 0
+      if (h.ok && borrows > 0) {
+        if (!c.chainscoreScoreable) {
+          failures.push({
+            chain: c.slug,
+            name: c.name,
+            reason: `${c.name}: ${borrows} borrow(s) found on-chain, but ChainScore does not score ${c.name} (it answers ${c.name} requests with Ethereum data; ChainScore issue #21)`,
+          })
+          continue
+        }
+        toScore.push({ slug: c.slug, aave: h.aaveBorrows, compound: h.compoundBorrows, verifiedBy: h.source })
+        continue
+      }
+      if (h.ok && h.unverified.length === 0) {
+        excluded.push({ chain: c.slug, name: c.name, reason: `no Aave or Compound borrowing found on-chain (${h.source})` })
+        continue
+      }
+      // Partial verification: this chain (or one protocol on it) could not be
+      // checked independently. Fall back to ChainScore's own view of it, which
+      // can only lower the minimum, never hide a chain from it.
+      const gap = h.ok ? `${h.unverified.join(', ')} not checkable by ${h.source}` : 'independent history check unavailable'
+      if (!c.chainscoreScoreable) {
+        excluded.push({ chain: c.slug, name: c.name, reason: `unverified: ${gap}, and ChainScore does not score ${c.name}` })
+        continue
+      }
+      toScore.push({ slug: c.slug, aave: 0, compound: 0, verifiedBy: 'chainscore-only' })
     }
-    if (borrowed.length === 0) {
+
+    if (failures.length === 0 && toScore.length === 0) {
       return {
         state: 'INSUFFICIENT_HISTORY',
         reason:
           'No Aave V2/V3 or Compound V2 borrowing found on any covered chain. Tenor lends to this wallet at floor terms. (Compound borrows made through a contract wallet are not detected.)',
         excludedChains: excluded,
+        history: summary,
       }
     }
 
@@ -249,29 +290,29 @@ export class AttestationService {
     const counted: ContributingChain[] = []
     const computedTimes: number[] = []
     const versions = new Set<string>()
-    const failures: ChainNote[] = []
 
-    await Promise.all(
-      borrowed.map(async (b) => {
-        const chain = chainBySlug(b.slug)
-        let cached = await this.d.store.getChainScore(wallet, b.slug, nowMs)
-        if (!cached) {
-          const upstream = await this.d.chainscore.score(wallet, b.slug)
-          const h = history[b.slug]
-          if (!h.ok) return
-          const v = validateChain(chain, h, upstream, nowMs)
-          if (!v.counted) {
-            failures.push({ chain: b.slug, name: chain.name, reason: v.reason })
-            return
-          }
-          cached = { score: v.score, computedAtMs: v.computedAtMs, modelVersion: v.modelVersion }
-          await this.d.store.putChainScore(wallet, b.slug, cached, v.computedAtMs + this.d.scoreTtlSeconds * 1000)
+    for (const t of toScore) {
+      const chain = chainBySlug(t.slug)
+      const unverified = t.verifiedBy === 'chainscore-only'
+      let cached = await this.d.store.getChainScore(wallet, t.slug, nowMs)
+      if (!cached) {
+        const upstream = await this.d.chainscore.score(wallet, t.slug)
+        if (unverified && upstream.ok && !seesBorrowing(upstream.data)) {
+          excluded.push({ chain: t.slug, name: chain.name, reason: 'unverified: independent check unavailable; ChainScore reports no borrowing here' })
+          continue
         }
-        counted.push({ chain: b.slug, name: chain.name, chainscoreScore: cached.score, aaveBorrows: b.aave, compoundBorrows: b.compound })
-        computedTimes.push(cached.computedAtMs)
-        versions.add(cached.modelVersion ?? 'unknown')
-      }),
-    )
+        const v = validateChain(chain, unverified ? null : t.aave + t.compound, upstream, nowMs)
+        if (!v.counted) {
+          failures.push({ chain: t.slug, name: chain.name, reason: v.reason })
+          continue
+        }
+        cached = { score: v.score, computedAtMs: v.computedAtMs, modelVersion: v.modelVersion }
+        await this.d.store.putChainScore(wallet, t.slug, cached, v.computedAtMs + this.d.scoreTtlSeconds * 1000)
+      }
+      counted.push({ chain: t.slug, name: chain.name, chainscoreScore: cached.score, aaveBorrows: t.aave, compoundBorrows: t.compound, verifiedBy: t.verifiedBy })
+      computedTimes.push(cached.computedAtMs)
+      versions.add(cached.modelVersion ?? 'unknown')
+    }
 
     if (failures.length > 0) {
       failures.sort((a, b) => a.chain.localeCompare(b.chain))
@@ -279,6 +320,25 @@ export class AttestationService {
         state: 'UNAVAILABLE',
         reason: `${failures.map((f) => f.reason).join('; ')}. Cannot score without every chain this wallet borrowed on. Not a low score.`,
         chains: failures,
+        history: summary,
+      }
+    }
+    if (!counted.some((c) => c.verifiedBy !== 'chainscore-only')) {
+      // Every contributing chain came from ChainScore alone: no independent
+      // evidence of borrowing at all.
+      if (counted.length === 0) {
+        return {
+          state: 'INSUFFICIENT_HISTORY',
+          reason: 'No borrowing found by the independent check, and ChainScore reports none on the chains that could not be checked.',
+          excludedChains: excluded,
+          history: summary,
+        }
+      }
+      return {
+        state: 'UNAVAILABLE',
+        reason: 'History verification unavailable: borrowing is reported only by ChainScore and could not be confirmed independently on any chain. Not a low score.',
+        chains: counted.map((c) => ({ chain: c.chain, name: c.name, reason: 'reported by ChainScore only; independent check unavailable' })),
+        history: summary,
       }
     }
 
@@ -296,6 +356,7 @@ export class AttestationService {
         state: 'UNAVAILABLE',
         reason: "ChainScore's data predates this wallet's latest Tenor liquidation; try again shortly.",
         chains: [],
+        history: summary,
       }
     }
 
@@ -306,6 +367,7 @@ export class AttestationService {
       chainscoreScore,
       aggregation: { rule: this.aggregation.name, description: this.aggregation.description },
       adjustments: policy.adjustments,
+      policyCaps: policy.policyCaps,
       tenorScore: policy.tenorScore,
       tier: scoreToTier(policy.tenorScore),
       issuedAt,
@@ -313,7 +375,22 @@ export class AttestationService {
       modelVersion: [...versions].sort().join('+'),
       contributingChains: counted,
       excludedChains: excluded,
+      history: summary,
     }
+  }
+
+  /** History results are cached for the score TTL (only when every chain was
+   *  checked, so a partial result is retried next time). */
+  private async historyFor(wallet: Address, nowMs: number, bypass: boolean) {
+    if (!bypass) {
+      const hit = await this.d.store.getHistory(wallet, nowMs)
+      if (hit) return hit
+    }
+    const h = await this.d.history.check(wallet)
+    if (COVERED_CHAINS.every((c) => h[c.slug].ok)) {
+      await this.d.store.putHistory(wallet, h, nowMs + this.d.scoreTtlSeconds * 1000)
+    }
+    return h
   }
 
   private async logRefusal(ev: Exclude<Evaluation, { state: 'SCORED' }>, wallet: Address, requestId: string, endpoint: string) {
@@ -342,6 +419,21 @@ export class AttestationService {
       if (this.locks.get(key) === tail) this.locks.delete(key)
     }
   }
+}
+
+function summarize(history: Record<ChainSlug, ChainHistory>): HistorySummary {
+  const sources = COVERED_CHAINS.map((c) => {
+    const h = history[c.slug]
+    return h.ok
+      ? { chain: c.slug, name: c.name, source: h.source, unverified: [...h.unverified], ...(h.primaryError ? { primaryError: h.primaryError } : {}) }
+      : { chain: c.slug, name: c.name, source: null, unverified: ['all'], primaryError: h.error }
+  })
+  return { verification: sources.every((s) => s.source && s.unverified.length === 0) ? 'full' : 'partial', sources }
+}
+
+/** ChainScore's own view that the wallet borrowed on this chain. */
+function seesBorrowing(d: { protocolsUsed: string[]; newWallet: boolean; noBorrowHistory?: boolean }) {
+  return !d.newWallet && !d.noBorrowHistory && (d.protocolsUsed.includes('Aave') || d.protocolsUsed.includes('Compound'))
 }
 
 function serialize(a: Attestation): SerializedAttestation {

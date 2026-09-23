@@ -14,7 +14,7 @@
  */
 import { z } from 'zod'
 import type { Address } from 'viem'
-import type { ChainSlug } from './coverage.js'
+import { isChainScoreSlug, type ChainSlug } from './coverage.js'
 
 /** Fields Tenor relies on. Unknown extra fields are ignored; missing or
  *  mistyped required fields make the whole response invalid. */
@@ -49,6 +49,9 @@ export class LegacyChainScoreClient implements ChainScoreClient {
   ) {}
 
   async score(wallet: Address, chain: ChainSlug): Promise<UpstreamResponse> {
+    // Never send a slug ChainScore does not serve: it would answer with
+    // Ethereum data instead of an error (ChainScore issue #21).
+    if (!isChainScoreSlug(chain)) return { ok: false, error: `ChainScore does not score ${chain}` }
     const url = `${this.baseUrl.replace(/\/$/, '')}/api/score/${wallet}?chain=${chain}`
     let res: Response
     try {

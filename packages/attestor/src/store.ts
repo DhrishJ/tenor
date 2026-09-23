@@ -12,6 +12,7 @@
 import type { Address } from 'viem'
 import type { ChainSlug } from './coverage.js'
 import type { Attestation } from './signer.js'
+import type { ChainHistory } from './history.js'
 
 export interface CachedChainScore {
   score: number
@@ -33,6 +34,9 @@ export interface Store {
   getChainScore(wallet: Address, chain: ChainSlug, nowMs: number): Promise<CachedChainScore | undefined>
   putChainScore(wallet: Address, chain: ChainSlug, value: CachedChainScore, expiresAtMs: number): Promise<void>
   deleteChainScores(wallet: Address): Promise<void>
+  /** Borrowing-history results, cached so re-scoring never re-queries sources. */
+  getHistory(wallet: Address, nowMs: number): Promise<Record<ChainSlug, ChainHistory> | undefined>
+  putHistory(wallet: Address, value: Record<ChainSlug, ChainHistory>, expiresAtMs: number): Promise<void>
   /** Atomically returns the live reservation for (wallet, nonce), or stores
    *  `payload` as the reservation if none is live. A reservation is live if its
    *  deadline has not passed AND its issuedAt is after `lastLiquidatedAt`:
@@ -54,6 +58,7 @@ export interface Store {
 export class MemoryStore implements Store {
   private scores = new Map<string, { value: CachedChainScore; expiresAtMs: number }>()
   private reservations = new Map<string, Attestation>()
+  private histories = new Map<string, { value: Record<ChainSlug, ChainHistory>; expiresAtMs: number }>()
   private hits = new Map<string, number[]>()
   private refusals: RefusalEntry[] = []
 
@@ -70,6 +75,15 @@ export class MemoryStore implements Store {
   async deleteChainScores(wallet: Address) {
     const prefix = `${wallet.toLowerCase()}:`
     for (const k of [...this.scores.keys()]) if (k.startsWith(prefix)) this.scores.delete(k)
+  }
+
+  async getHistory(wallet: Address, nowMs: number) {
+    const e = this.histories.get(wallet.toLowerCase())
+    return e && e.expiresAtMs > nowMs ? e.value : undefined
+  }
+
+  async putHistory(wallet: Address, value: Record<ChainSlug, ChainHistory>, expiresAtMs: number) {
+    this.histories.set(wallet.toLowerCase(), { value, expiresAtMs })
   }
 
   // JavaScript runs this method to completion without interleaving, so the

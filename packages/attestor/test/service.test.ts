@@ -45,13 +45,14 @@ describe('three states', () => {
     expect(t.chainscore.calls.sort()).toEqual(['arbitrum', 'ethereum'])
   })
 
-  it('UNAVAILABLE: independent history check failed; names the chain; nothing signed', async () => {
+  it('UNAVAILABLE: every history source failed; nothing signed', async () => {
     const h = noHistory()
-    h.scroll = { ok: false, error: 'HyperSync HTTP 502 on chain 534352' }
+    for (const k of Object.keys(h) as Array<keyof typeof h>) h[k] = { ok: false, error: 'HyperSync HTTP 502; Alchemy HTTP 503', attempted: ['hypersync', 'alchemy'] }
     const t = makeService({ history: new FakeHistory(h) })
     const r = await t.service.attest(WALLET, 'req-1')
     expect(r.state).toBe('UNAVAILABLE')
-    if (r.state === 'UNAVAILABLE') expect(r.reason).toContain('Scroll')
+    if (r.state === 'UNAVAILABLE') expect(r.reason).toContain('History verification unavailable')
+    expect(t.chainscore.calls).toEqual([])
     expect(t.signCalls()).toBe(0)
   })
 })
@@ -166,7 +167,7 @@ describe('refusal checks (validate.ts through the service)', () => {
 })
 
 describe('Tenor policy (itemized, labelled separately from ChainScore)', () => {
-  it('one recent Tenor liquidation: -72 points (doubled odds); ChainScore score unchanged', async () => {
+  it('one recent Tenor liquidation: -72 points AND a separate tier-C cap; ChainScore score unchanged', async () => {
     const registry = new FakeRegistry()
     registry.record = { lastLiquidatedAt: NOW_MS / 1000 - 3600, liquidationCount: 1, shortfallCount: 0, totalShortfall: 0n }
     const t = makeService({
@@ -178,9 +179,11 @@ describe('Tenor policy (itemized, labelled separately from ChainScore)', () => {
     expect(r.state).toBe('SCORED')
     if (r.state !== 'SCORED') return
     expect(r.chainscoreScore).toBe(800)
-    expect(r.adjustments).toEqual([expect.objectContaining({ rule: 'tenor-liquidation', points: -72 })])
-    expect(r.tenorScore).toBe(728)
-    expect(r.tier).toBe('B') // was A
+    expect(r.adjustments).toEqual([expect.objectContaining({ rule: 'tenor-liquidation-penalty', points: -72 })])
+    // 800 - 72 = 728 (B); the policy cap then limits it to tier C.
+    expect(r.policyCaps).toEqual([expect.objectContaining({ rule: 'tenor-liquidation-tier-cap', maxScore: 642, maxTier: 'C', binding: true })])
+    expect(r.tenorScore).toBe(642)
+    expect(r.tier).toBe('C') // was A
   })
 
   it('shortfall: capped at 451 (FLOOR) and every step itemized', async () => {
@@ -193,7 +196,11 @@ describe('Tenor policy (itemized, labelled separately from ChainScore)', () => {
     })
     const r = await t.service.evaluate(WALLET, 'req-1')
     if (r.state !== 'SCORED') throw new Error(r.state)
-    expect(r.adjustments.map((a) => a.rule)).toEqual(['tenor-liquidation', 'tenor-shortfall-cap'])
+    expect(r.adjustments.map((a) => a.rule)).toEqual(['tenor-liquidation-penalty'])
+    expect(r.policyCaps.map((c) => [c.rule, c.binding])).toEqual([
+      ['tenor-liquidation-tier-cap', true],
+      ['tenor-shortfall-cap', true],
+    ])
     expect(r.tenorScore).toBe(451)
     expect(r.tier).toBe('FLOOR')
   })
@@ -209,7 +216,23 @@ describe('Tenor policy (itemized, labelled separately from ChainScore)', () => {
     const r = await t.service.evaluate(WALLET, 'req-1')
     if (r.state !== 'SCORED') throw new Error(r.state)
     expect(r.adjustments).toEqual([])
+    expect(r.policyCaps).toEqual([])
     expect(r.tenorScore).toBe(800)
+  })
+
+  it('a cap that does not bind is still listed, marked non-binding', async () => {
+    const registry = new FakeRegistry()
+    registry.record = { lastLiquidatedAt: NOW_MS / 1000 - 3600, liquidationCount: 1, shortfallCount: 0, totalShortfall: 0n }
+    const t = makeService({
+      registry,
+      history: new FakeHistory(withBorrows({ arbitrum: 3 })),
+      chainscore: new FakeChainScore({ arbitrum: goodUpstream({ score: 600 }) }),
+    })
+    const r = await t.service.evaluate(WALLET, 'req-1')
+    if (r.state !== 'SCORED') throw new Error(r.state)
+    expect(r.tenorScore).toBe(528) // 600 - 72, below the C cap
+    expect(r.policyCaps).toEqual([expect.objectContaining({ binding: false })])
+    expect(r.tier).toBe('D')
   })
 })
 
@@ -233,7 +256,7 @@ describe('feedback loop (P2-O11): after a liquidation, a NEW penalized score is 
     if (after.state !== 'SCORED') throw new Error(after.state)
     expect(chainscore.calls).toHaveLength(2) // cache bypassed
     expect(after.issuedAt).toBeGreaterThan(registry.record.lastLiquidatedAt)
-    expect(after.tenorScore).toBe(728)
+    expect(after.tenorScore).toBe(642)
     expect(after.signature).not.toBe(before.signature)
   })
 
@@ -359,5 +382,84 @@ describe('signing, nonces and caching', () => {
     if (again.state !== 'SCORED') throw new Error('not scored')
     expect(again.alreadyOnChain).toBe(true)
     expect(again.signature).toBeNull()
+  })
+})
+
+describe('partial verification (fallback) and Scroll (P3-O7, P3-O15)', () => {
+  const hs = (aave: number) => ({ ok: true as const, aaveBorrows: aave, compoundBorrows: 0, source: 'hypersync' as const, unverified: [] as Array<'compound'> })
+  const al = (aave: number, unverified: Array<'compound'> = []) => ({ ok: true as const, aaveBorrows: aave, compoundBorrows: 0, source: 'alchemy' as const, unverified, primaryError: 'HyperSync HTTP 429 on chain 1' })
+  const down = (chain: string) => ({ ok: false as const, error: `HyperSync timeout; Alchemy fallback does not cover ${chain}`, attempted: ['hypersync', 'alchemy'] as Array<'hypersync' | 'alchemy'> })
+
+  it('HyperSync down: Alchemy completes SCORED; unchecked chains are labelled; the response says which source answered', async () => {
+    const h = noHistory()
+    h.ethereum = al(0, ['compound'])
+    h.arbitrum = al(3)
+    h.optimism = al(0)
+    h.polygon = al(0)
+    h.base = al(0)
+    h.avalanche = down('Avalanche')
+    h.scroll = down('Scroll')
+    const t = makeService({
+      history: new FakeHistory(h),
+      chainscore: new FakeChainScore({
+        arbitrum: goodUpstream({ score: 790 }),
+        ethereum: goodUpstream({ score: 300, newWallet: true, totalTxns: 0, walletAge: 0, protocolsUsed: [] }),
+        avalanche: goodUpstream({ score: 0, noBorrowHistory: true, protocolsUsed: [] }),
+      }),
+    })
+    const r = await t.service.attest(WALLET, 'req-1')
+    if (r.state !== 'SCORED') throw new Error(`${r.state}: ${'reason' in r ? r.reason : ''}`)
+    expect(r.signature).toBeTruthy()
+    expect(r.history.verification).toBe('partial')
+    expect(r.contributingChains).toEqual([expect.objectContaining({ chain: 'arbitrum', verifiedBy: 'alchemy' })])
+    const reasons = Object.fromEntries(r.excludedChains.map((c) => [c.chain, c.reason]))
+    expect(reasons.avalanche).toContain('unverified')
+    expect(reasons.ethereum).toContain('unverified')
+    expect(reasons.scroll).toContain('ChainScore does not score Scroll')
+    expect(r.history.sources.find((s) => s.chain === 'arbitrum')).toMatchObject({ source: 'alchemy', primaryError: 'HyperSync HTTP 429 on chain 1' })
+    expect(t.chainscore.calls).not.toContain('scroll')
+  })
+
+  it('a chain only ChainScore could see still lowers the minimum (cannot be hidden)', async () => {
+    const h = withBorrows({ arbitrum: 3 })
+    h.avalanche = down('Avalanche')
+    const t = makeService({
+      history: new FakeHistory(h),
+      chainscore: new FakeChainScore({ arbitrum: goodUpstream({ score: 820 }), avalanche: goodUpstream({ score: 610 }) }),
+    })
+    const r = await t.service.evaluate(WALLET, 'req-1')
+    if (r.state !== 'SCORED') throw new Error(r.state)
+    expect(r.chainscoreScore).toBe(610)
+    expect(r.contributingChains.find((c) => c.chain === 'avalanche')?.verifiedBy).toBe('chainscore-only')
+  })
+
+  it('borrowing reported only by ChainScore, confirmed nowhere independently -> UNAVAILABLE', async () => {
+    const h = noHistory()
+    h.avalanche = down('Avalanche')
+    const t = makeService({ history: new FakeHistory(h), chainscore: new FakeChainScore({ avalanche: goodUpstream({ score: 700 }) }) })
+    const r = await t.service.evaluate(WALLET, 'req-1')
+    expect(r.state).toBe('UNAVAILABLE')
+    if (r.state === 'UNAVAILABLE') expect(r.reason).toContain('could not be confirmed independently')
+  })
+
+  it('verified Scroll borrowing -> UNAVAILABLE naming the cause; ChainScore is never asked about Scroll', async () => {
+    const h = withBorrows({ ethereum: 2 })
+    h.scroll = hs(4)
+    const t = makeService({ history: new FakeHistory(h), chainscore: new FakeChainScore({ ethereum: goodUpstream({ score: 800 }) }) })
+    const r = await t.service.attest(WALLET, 'req-1')
+    expect(r.state).toBe('UNAVAILABLE')
+    if (r.state === 'UNAVAILABLE') {
+      expect(r.reason).toContain('ChainScore does not score Scroll')
+      expect(r.reason).toContain('issue #21')
+    }
+    expect(t.chainscore.calls).not.toContain('scroll')
+    expect(t.signCalls()).toBe(0)
+  })
+
+  it('history results are cached: a second evaluation does not re-query sources', async () => {
+    const t = makeService({ history: new FakeHistory(withBorrows({ arbitrum: 3 })), chainscore: new FakeChainScore({ arbitrum: goodUpstream() }) })
+    await t.service.evaluate(WALLET, 'req-1')
+    await t.service.evaluate(WALLET, 'req-2')
+    expect(t.history.calls).toBe(1)
   })
 })

@@ -1,27 +1,39 @@
 /**
- * Tenor policy adjustments, applied AFTER the ChainScore score and labelled as
- * Tenor's, never as ChainScore's.
+ * Tenor policy, applied AFTER the ChainScore score and labelled as Tenor's,
+ * never as ChainScore's. Two different kinds of thing, kept apart everywhere
+ * (service response, logs, UI):
+ *
+ *   adjustments  point changes in the MODEL'S units
+ *   policyCaps   ceilings set by POLICY, not by the model
  *
  *   ChainScore score  what the upstream returned (aggregated across chains)
- *   Tenor adjustment  each rule below, itemized
- *   Tenor score       the number that is signed and goes on-chain
+ *   + adjustments     e.g. -72 per recent Tenor liquidation
+ *   capped by caps    e.g. at most tier C after a Tenor liquidation
+ *   = Tenor score     the number that is signed and goes on-chain
  *
- * The on-chain registry already does the time-critical part: a Tenor
- * liquidation invalidates the current score at once, and any attestation
- * issued before it is rejected. This module decides what the NEXT score looks
- * like, and never contradicts the registry.
+ * On-chain, the signed score is the only channel, so a cap is enacted as a
+ * score ceiling (the registry derives the tier from the score). The response
+ * still reports it as a cap, with its own line.
  *
- * Units: ChainScore's score band is points-to-double-odds with PDO = 72.2
- * (model_meta.json, score_band.pdo, commit a519058). So 72 points is "treat as
- * twice the odds of liquidation". The penalty is expressed in the model's own
- * scale rather than chosen for demo effect. The size and windows below are
- * still POLICY PLACEHOLDERS, not calibrated.
+ * Units for adjustments: ChainScore's score band is points-to-double-odds with
+ * PDO = 72.2 (model_meta.json, score_band.pdo, commit a519058). So -72 points
+ * is "treat as twice the odds of liquidation". Sizes and windows are POLICY
+ * PLACEHOLDERS, not calibrated.
+ *
+ * The registry already does the time-critical part: a Tenor liquidation
+ * invalidates the current score on-chain at once. This module shapes the NEXT
+ * score and never contradicts the registry.
  */
+import { scoreToTier, type Tier } from './tiers.js'
+
 export const POINTS_PER_DOUBLED_ODDS = 72
 export const PENALTY_WINDOW_SECONDS = 180 * 24 * 60 * 60
 export const MAX_PENALIZED_LIQUIDATIONS = 3
-/** Highest FLOOR score (RiskParams: D starts at 452). */
+/** Top of tier C (RiskParams: B starts at 643). */
+export const LIQUIDATION_TIER_CAP = 642
+/** Top of FLOOR (RiskParams: D starts at 452). */
 export const SHORTFALL_CAP = 451
+export const MIN_SCORE = 300
 
 export interface LiquidationRecord {
   lastLiquidatedAt: number
@@ -31,18 +43,29 @@ export interface LiquidationRecord {
 }
 
 export interface Adjustment {
-  rule: 'tenor-liquidation' | 'tenor-shortfall-cap' | 'range-clamp'
+  rule: 'tenor-liquidation-penalty'
   points: number
+  detail: string
+}
+
+export interface PolicyCap {
+  rule: 'tenor-liquidation-tier-cap' | 'tenor-shortfall-cap'
+  maxScore: number
+  maxTier: Tier
+  /** True if the cap lowered the score (the score was above it). */
+  binding: boolean
   detail: string
 }
 
 export interface PolicyResult {
   adjustments: Adjustment[]
+  policyCaps: PolicyCap[]
   tenorScore: number
 }
 
 export function applyTenorPolicy(chainscoreScore: number, rec: LiquidationRecord, nowSec: number): PolicyResult {
   const adjustments: Adjustment[] = []
+  const policyCaps: PolicyCap[] = []
   let score = chainscoreScore
   const recent = rec.liquidationCount > 0 && nowSec - rec.lastLiquidatedAt < PENALTY_WINDOW_SECONDS
 
@@ -54,25 +77,39 @@ export function applyTenorPolicy(chainscoreScore: number, rec: LiquidationRecord
     const points = -POINTS_PER_DOUBLED_ODDS * n
     score += points
     adjustments.push({
-      rule: 'tenor-liquidation',
+      rule: 'tenor-liquidation-penalty',
       points,
-      detail: `${rec.liquidationCount} Tenor liquidation(s), latest within 180 days: -${POINTS_PER_DOUBLED_ODDS} points each (doubled liquidation odds), max ${MAX_PENALIZED_LIQUIDATIONS}`,
+      detail: `${rec.liquidationCount} Tenor liquidation(s), latest within 180 days: -${POINTS_PER_DOUBLED_ODDS} points each (the model's scale: doubled liquidation odds), at most ${MAX_PENALIZED_LIQUIDATIONS}`,
     })
 
-    if (rec.shortfallCount > 0 && score > SHORTFALL_CAP) {
-      const points = SHORTFALL_CAP - score
-      score = SHORTFALL_CAP
-      adjustments.push({
+    const caps: Array<Omit<PolicyCap, 'binding'>> = [
+      {
+        rule: 'tenor-liquidation-tier-cap',
+        maxScore: LIQUIDATION_TIER_CAP,
+        maxTier: 'C',
+        detail: 'Tenor policy: at most tier C for 180 days after a Tenor liquidation',
+      },
+    ]
+    if (rec.shortfallCount > 0) {
+      caps.push({
         rule: 'tenor-shortfall-cap',
-        points,
-        detail: `${rec.shortfallCount} Tenor liquidation(s) left bad debt: capped at ${SHORTFALL_CAP} (floor tier) while within 180 days`,
+        maxScore: SHORTFALL_CAP,
+        maxTier: 'FLOOR',
+        detail: `Tenor policy: floor tier for 180 days after a Tenor liquidation that left bad debt (${rec.shortfallCount} so far)`,
       })
+    }
+    for (const cap of caps) {
+      const binding = score > cap.maxScore
+      if (binding) score = cap.maxScore
+      policyCaps.push({ ...cap, binding })
     }
   }
 
-  if (score < 300) {
-    adjustments.push({ rule: 'range-clamp', points: 300 - score, detail: 'clamped to the 300 minimum' })
-    score = 300
-  }
-  return { adjustments, tenorScore: score }
+  if (score < MIN_SCORE) score = MIN_SCORE
+  return { adjustments, policyCaps, tenorScore: score }
+}
+
+/** Shown when a cap binds: the tier the adjustments alone would have given. */
+export function tierBeforeCaps(chainscoreScore: number, adjustments: Adjustment[]): Tier {
+  return scoreToTier(Math.max(MIN_SCORE, chainscoreScore + adjustments.reduce((s, a) => s + a.points, 0)))
 }

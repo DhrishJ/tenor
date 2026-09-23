@@ -8,7 +8,6 @@
  * uncountable chain with borrowing makes the whole wallet UNAVAILABLE (a chain
  * we cannot read might hold the liquidation that would lower the minimum).
  */
-import type { ChainHistory } from './history.js'
 import type { UpstreamResponse } from './chainscore.js'
 import type { CoveredChain } from './coverage.js'
 
@@ -32,13 +31,18 @@ export type FailedCheck =
   | 'sentinel'
   | 'freshness'
 
+/**
+ * @param verifiedBorrows borrows found by the independent check, or null when
+ *   no independent source could check this chain (partial verification).
+ */
 export function validateChain(
   chain: CoveredChain,
-  history: Extract<ChainHistory, { ok: true }>,
+  verifiedBorrows: number | null,
   upstream: UpstreamResponse,
   nowMs: number,
 ): ChainValidation {
-  const borrows = history.aaveBorrows + history.compoundBorrows
+  const evidence =
+    verifiedBorrows === null ? 'a wallet ChainScore reports as a borrower' : `a wallet with ${verifiedBorrows} on-chain borrow(s)`
   const fail = (check: FailedCheck, reason: string): ChainValidation => ({ counted: false, check, reason })
 
   if (!upstream.ok) return fail('upstream-error', `${chain.name}: ${upstream.error}`)
@@ -50,10 +54,10 @@ export function validateChain(
   }
 
   // (a) Independent history disagrees with ChainScore.
-  if (d.newWallet || d.noBorrowHistory) {
+  if (verifiedBorrows !== null && (d.newWallet || d.noBorrowHistory)) {
     return fail(
       'history-mismatch',
-      `${chain.name}: ChainScore reports no borrowing history, but ${borrows} borrow(s) were found on-chain`,
+      `${chain.name}: ChainScore reports no borrowing history, but ${verifiedBorrows} borrow(s) were found on-chain`,
     )
   }
 
@@ -62,7 +66,7 @@ export function validateChain(
   if (d.totalTxns === 0 || d.walletAge === 0) {
     return fail(
       'consistency',
-      `${chain.name}: ChainScore's transaction history is empty for a wallet with ${borrows} on-chain borrow(s); an upstream data source failed without reporting it`,
+      `${chain.name}: ChainScore's transaction history is empty for ${evidence}; an upstream data source failed without reporting it`,
     )
   }
 

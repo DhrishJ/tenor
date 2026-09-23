@@ -16,7 +16,8 @@ const noLiquidations = {
   onChainScore: async () => ({ score: 0, issuedAt: 0, expiresAt: 0, isStale: true }),
 }
 const svc = new AttestationService({
-  history: new HyperSyncHistoryChecker({ apiToken: process.env.ENVIO_API_TOKEN! }),
+  // Paced well inside HyperSync's free-tier fair use (run 2 tripped it).
+  history: new HyperSyncHistoryChecker({ apiToken: process.env.ENVIO_API_TOKEN!, minIntervalMs: 1_000 }),
   chainscore: new LegacyChainScoreClient('https://chainscore.dev'),
   registry: noLiquidations,
   signer: {} as never, // evaluate() never signs

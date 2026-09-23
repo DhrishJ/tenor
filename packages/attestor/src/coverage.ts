@@ -18,11 +18,29 @@ import type { Address, Hex } from 'viem'
 
 export type ChainSlug = 'ethereum' | 'arbitrum' | 'optimism' | 'polygon' | 'base' | 'avalanche' | 'scroll'
 
+/**
+ * Chain slugs ChainScore's legacy endpoint actually serves (prior art,
+ * lib/validation.ts CHAIN_SLUGS at commit a519058). Anything else is SILENTLY
+ * answered with Ethereum data (ChainScore issue #21), so Tenor never sends it.
+ */
+export const CHAINSCORE_SLUGS = ['ethereum', 'polygon', 'arbitrum', 'optimism', 'base', 'avalanche', 'bnb'] as const
+export type ChainScoreSlug = (typeof CHAINSCORE_SLUGS)[number]
+
+export function isChainScoreSlug(s: string): s is ChainScoreSlug {
+  return (CHAINSCORE_SLUGS as readonly string[]).includes(s)
+}
+
 export interface CoveredChain {
   slug: ChainSlug
   /** Display name used in user-facing reasons ("Base data unavailable ..."). */
   name: string
   chainId: number
+  /** Whether ChainScore can score this chain. Scroll: no (see CHAINSCORE_SLUGS). */
+  chainscoreScoreable: boolean
+  /** Alchemy network for the fallback history source; absent where Alchemy's
+   *  getAssetTransfers is not offered (Avalanche, Scroll). Names as used by
+   *  ChainScore's own Alchemy integration (lib/chains.ts, a519058). */
+  alchemyNetwork?: string
   aaveV3Pool: Address
   aaveV2Pool?: Address
   compoundV2CTokens?: readonly Address[]
@@ -71,16 +89,18 @@ export const COVERED_CHAINS: readonly CoveredChain[] = [
     slug: 'ethereum',
     name: 'Ethereum',
     chainId: 1,
+    chainscoreScoreable: true,
+    alchemyNetwork: 'eth-mainnet',
     aaveV3Pool: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
     aaveV2Pool: '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
     compoundV2CTokens: COMPOUND_V2_CTOKENS,
   },
-  { slug: 'arbitrum', name: 'Arbitrum', chainId: 42161, aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
-  { slug: 'optimism', name: 'Optimism', chainId: 10, aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
-  { slug: 'polygon', name: 'Polygon', chainId: 137, aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
-  { slug: 'base', name: 'Base', chainId: 8453, aaveV3Pool: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5' },
-  { slug: 'avalanche', name: 'Avalanche', chainId: 43114, aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
-  { slug: 'scroll', name: 'Scroll', chainId: 534352, aaveV3Pool: '0x11fCfe756c05AD438e312a7fd934381537D3cFfe' },
+  { slug: 'arbitrum', name: 'Arbitrum', chainId: 42161, chainscoreScoreable: true, alchemyNetwork: 'arb-mainnet', aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+  { slug: 'optimism', name: 'Optimism', chainId: 10, chainscoreScoreable: true, alchemyNetwork: 'opt-mainnet', aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+  { slug: 'polygon', name: 'Polygon', chainId: 137, chainscoreScoreable: true, alchemyNetwork: 'polygon-mainnet', aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+  { slug: 'base', name: 'Base', chainId: 8453, chainscoreScoreable: true, alchemyNetwork: 'base-mainnet', aaveV3Pool: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5' },
+  { slug: 'avalanche', name: 'Avalanche', chainId: 43114, chainscoreScoreable: true, aaveV3Pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+  { slug: 'scroll', name: 'Scroll', chainId: 534352, chainscoreScoreable: false, aaveV3Pool: '0x11fCfe756c05AD438e312a7fd934381537D3cFfe' },
 ]
 
 export function chainBySlug(slug: ChainSlug): CoveredChain {

@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server'
 import { createPublicClient, http } from 'viem'
 import { loadConfig } from './config.js'
 import { LegacyChainScoreClient } from './chainscore.js'
-import { HyperSyncHistoryChecker } from './history.js'
+import { AlchemyHistorySource, FallbackHistoryChecker, HyperSyncHistoryChecker, type HistoryChecker } from './history.js'
 import { createApp, type HealthCheck } from './http.js'
 import { jsonLogger } from './log.js'
 import { ViemRegistryReader } from './registry.js'
@@ -22,10 +22,15 @@ if (signer.address !== cfg.expectedAttestor) {
   process.exit(1)
 }
 
+const hypersync = new HyperSyncHistoryChecker({ apiToken: cfg.envioToken })
+const history: HistoryChecker = cfg.alchemyKey
+  ? new FallbackHistoryChecker(hypersync, new AlchemyHistorySource({ apiKey: cfg.alchemyKey }))
+  : hypersync
+
 const store = new MemoryStore()
 const registry = new ViemRegistryReader(client, cfg.registry)
 const service = new AttestationService({
-  history: new HyperSyncHistoryChecker({ apiToken: cfg.envioToken }),
+  history,
   chainscore: new LegacyChainScoreClient(cfg.chainscoreBaseUrl),
   registry,
   signer,
@@ -61,6 +66,13 @@ const health: HealthCheck[] = [
       })
       return { ok: res.ok, detail: `HTTP ${res.status}` }
     },
+  },
+  {
+    name: 'history-fallback',
+    check: async () => ({
+      ok: Boolean(cfg.alchemyKey),
+      detail: cfg.alchemyKey ? 'Alchemy fallback configured' : 'ALCHEMY_API_KEY not set: HyperSync only, no fallback',
+    }),
   },
   {
     name: 'chainscore',

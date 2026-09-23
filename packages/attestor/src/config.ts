@@ -14,6 +14,8 @@ const envSchema = z.object({
   DEPLOYMENTS_DIR: z.string().default(resolve(import.meta.dirname, '../../../deployments')),
   ATTESTOR_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/, 'ATTESTOR_PRIVATE_KEY must be a 32-byte hex key'),
   ENVIO_API_TOKEN: z.string().min(1),
+  /** Optional: enables the Alchemy fallback for the history check. */
+  ALCHEMY_API_KEY: z.string().min(1).optional(),
   CHAINSCORE_BASE_URL: z.string().url(),
   SCORE_TTL_SECONDS: z.coerce.number().int().positive().max(172_800).default(86_400),
   SUBMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
@@ -40,6 +42,7 @@ export interface Config {
   eip712: { name: string; version: string }
   attestorKey: Hex
   envioToken: string
+  alchemyKey: string | undefined
   chainscoreBaseUrl: string
   scoreTtlSeconds: number
   submitWindowSeconds: number
@@ -62,6 +65,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     eip712: { name: dep.eip712Name, version: dep.eip712Version },
     attestorKey: e.ATTESTOR_PRIVATE_KEY as Hex,
     envioToken: e.ENVIO_API_TOKEN,
+    alchemyKey: e.ALCHEMY_API_KEY,
     chainscoreBaseUrl: e.CHAINSCORE_BASE_URL,
     scoreTtlSeconds: e.SCORE_TTL_SECONDS,
     submitWindowSeconds: e.SUBMIT_WINDOW_SECONDS,
