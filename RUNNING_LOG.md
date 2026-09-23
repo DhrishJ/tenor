@@ -91,3 +91,46 @@ local Monad-mode anvil; then Phase 2.
   the HyperSync token (not on Q5).
 - **Waiting on:** approval of the objections, git identity, a HyperSync
   token, a ChainScore v1 key, and confirmation of Supabase.
+
+## 2026-09-22 (Tue), late: Phase 2 built and at the gate
+
+**Done**
+- Git identity set (DhrishJ). The history starts 2026-09-22: 10 commits.
+- Deploy script (`contracts/script/Deploy.s.sol`) writes
+  `deployments/<chainId>.json`. Verified on a local Monad-mode anvil (Phase 1
+  remainder, P2-O1).
+- `packages/attestor`: the refusal layer, three states, minimum aggregation
+  behind an interface, Tenor policy, EIP-712 signer, per-nonce payload
+  reservations, rate limits, a refusal log (`/refusals`) and per-dependency
+  `/health`. 36 unit tests pass.
+- The local end-to-end run (`scripts/e2e-local.ts`) passes every check,
+  against the deployed contracts and live ChainScore.
+
+**Found by the end-to-end run and fixed**
+- An unsubmitted reservation made before a liquidation blocked the
+  post-liquidation score for up to 15 minutes (a feedback-loop bug).
+  Reservations issued at or before `lastLiquidatedAt` are now replaced.
+  Added a regression unit test.
+
+**Operational incident**
+- Envio HyperSync: the token worked at 22:07 CDT (full Arbitrum scan in
+  about 3 s). From about 22:10, every `*.hypersync.xyz` host rejects TLS
+  ("tlsv1 alert protocol version"), both inside and outside the sandbox.
+  `docs.envio.dev` and `envio.dev` are fine; there is no status page. Cause
+  unknown: an outage, or an IP-level block after our queries. The end-to-end
+  run therefore used an explicitly labelled history fixture.
+
+**Named blockers**
+- **The distribution check has been blocked since 2026-09-22** by
+  HyperSync's reachability. It's no longer blocked on Q5 (P2-O12).
+- Q5 (a demo wallet with real history) blocks Phase 4 only.
+
+**ChainScore usage (you asked me to track burn)**
+- The endpoint in use is legacy (P2-O13, needs confirmation). It has **no
+  monthly quota**, only 20 requests per minute per IP.
+- Requests made on 2026-09-22: about 18 (6 in Phase 0, 6 Phase 2 probes, 3
+  per end-to-end run × 2). Forced-failure runs use a dead URL and spend
+  none. Our 24 h cache means one live request per chain per wallet per day.
+
+**Next**: Phase 3 after approval. Before Phase 4: resolve HyperSync
+reachability and run the distribution check.
