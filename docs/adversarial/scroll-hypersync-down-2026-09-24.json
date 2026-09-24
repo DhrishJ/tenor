@@ -1,0 +1,108 @@
+{
+ "at": "2026-09-24T22:47:59.459Z",
+ "chainscoreQueried": [
+  "ethereum",
+  "avalanche"
+ ],
+ "result": {
+  "state": "INSUFFICIENT_HISTORY",
+  "reason": "No borrowing found by the independent check, and ChainScore reports none on the chains that could not be checked.",
+  "excludedChains": [
+   {
+    "chain": "arbitrum",
+    "name": "Arbitrum",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "optimism",
+    "name": "Optimism",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "polygon",
+    "name": "Polygon",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "base",
+    "name": "Base",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "scroll",
+    "name": "Scroll",
+    "reason": "unverified: independent history check unavailable, and ChainScore does not score Scroll"
+   },
+   {
+    "chain": "ethereum",
+    "name": "Ethereum",
+    "reason": "unverified: independent check unavailable; ChainScore reports no borrowing here"
+   },
+   {
+    "chain": "avalanche",
+    "name": "Avalanche",
+    "reason": "unverified: independent check unavailable; ChainScore reports no borrowing here"
+   }
+  ],
+  "history": {
+   "verification": "partial",
+   "sources": [
+    {
+     "chain": "ethereum",
+     "name": "Ethereum",
+     "source": "alchemy",
+     "unverified": [
+      "compound"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "arbitrum",
+     "name": "Arbitrum",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "optimism",
+     "name": "Optimism",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "polygon",
+     "name": "Polygon",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "base",
+     "name": "Base",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "avalanche",
+     "name": "Avalanche",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Avalanche"
+    },
+    {
+     "chain": "scroll",
+     "name": "Scroll",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Scroll"
+    }
+   ]
+  }
+ }
+}

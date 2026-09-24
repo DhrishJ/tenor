@@ -218,3 +218,28 @@ whose key you control. It blocks Phase 4 entirely. It was first asked on
 
 **ChainScore usage:** about 10 legacy calls today during the walkthrough
 (24 h cache).
+
+## 2026-09-24: Phase 4 start
+
+- **Faucet:** 50 MON per 24 h per wallet, behind browser verification.
+  Budget: about 8 MON through 12 Oct (OBJECTIONS, Phase 4).
+- **Portal read (user signed in):** Perpl "Analytics / Risk Tool" must be
+  Perpl-focused (DECLINE). The Alchemy bounty requires "any Alchemy service
+  or developer tool that supports Monad" (see P4-O18). The track needs a
+  ≤3 min demo video, a ≤2 min pitch video, a logo, and a repo accessible to
+  metropolis@hackathon.monad.xyz (public repo: yes).
+- **Alchemy serves Monad testnet:** `eth_chainId` gives 0x279f, and
+  `alchemy_getAssetTransfers` answers.
+- **HyperSync answered from this machine at 17:36 CDT.** Still treated as
+  unresolved (§2).
+- **Scroll check, live, HyperSync up**
+  (`docs/adversarial/scroll-hypersync-up-2026-09-24.json`): wallet
+  `0x1ea6…b3ac` (3 Aave borrows on Scroll) → UNAVAILABLE, and ChainScore
+  was asked about **no** chain. Pass.
+- **Same wallet, HyperSync forced down, Alchemy up**
+  (`scroll-hypersync-down-2026-09-24.json`): INSUFFICIENT_HISTORY,
+  verification partial, Scroll listed as unverified, ChainScore asked
+  only about Ethereum and Avalanche. Refused, not mis-scored.
+- **The real gap:** a wallet with borrowing on Ethereum *and* Scroll would
+  be SCORED on Ethereum alone while HyperSync is down; the Scroll borrow is
+  invisible. Goes in the README.

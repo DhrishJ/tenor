@@ -1,0 +1,62 @@
+{
+ "at": "2026-09-24T22:47:42.906Z",
+ "chainscoreQueried": [],
+ "result": {
+  "state": "UNAVAILABLE",
+  "reason": "Scroll: 3 borrow(s) found on-chain, but ChainScore does not score Scroll (it answers Scroll requests with Ethereum data; ChainScore issue #21). Cannot score without every chain this wallet borrowed on. Not a low score.",
+  "chains": [
+   {
+    "chain": "scroll",
+    "name": "Scroll",
+    "reason": "Scroll: 3 borrow(s) found on-chain, but ChainScore does not score Scroll (it answers Scroll requests with Ethereum data; ChainScore issue #21)"
+   }
+  ],
+  "history": {
+   "verification": "full",
+   "sources": [
+    {
+     "chain": "ethereum",
+     "name": "Ethereum",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "arbitrum",
+     "name": "Arbitrum",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "optimism",
+     "name": "Optimism",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "polygon",
+     "name": "Polygon",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "base",
+     "name": "Base",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "avalanche",
+     "name": "Avalanche",
+     "source": "hypersync",
+     "unverified": []
+    },
+    {
+     "chain": "scroll",
+     "name": "Scroll",
+     "source": "hypersync",
+     "unverified": []
+    }
+   ]
+  }
+ }
+}
