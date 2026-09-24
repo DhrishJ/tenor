@@ -1431,3 +1431,33 @@ into a venv under `~/.local`, pinned, as with the other tools.
    If it doesn't, the scored path can only be rehearsed with a history
    wallet whose key we don't hold, which is impossible. The whole §6
    scored subset then waits, and everything else goes ahead.
+
+---
+
+# Phase 4 resolutions (2026-09-24)
+
+All of P4-O7 to P4-O17 approved, with these additions:
+
+- **P4-O7:** reorders Phase 5. The final deployment needs its own
+  verification, seeding, indexer pointing and keep-alive; budget that time.
+  Addresses in the README, video and submission are the final deployment's:
+  freeze them last and check every place an address appears.
+- **P4-O9:** the UI language must match. "Score expired" must tell the user
+  they can still borrow at floor terms, not imply they're locked out.
+- **P4-O10:** the README says the refusal was captured on a real wallet on
+  a specific date (2026-09-23) and that the upstream data has since
+  recovered.
+- **P4-O11:** state plainly that the Scroll guard depends on a provider
+  that has blocked us twice.
+- **P4-O12:** you create Supabase, Railway, Envio Cloud and Vercel.
+- **P4-O13:** if the keeper hasn't run within its expected window,
+  `/health` reports **degraded**, not an old timestamp.
+- **P4-O14:** don't claim the host change fixes HyperSync.
+- **P4-O15:** use "the rule changes outcomes; four wallets can't show it's
+  right".
+
+**Keys generated 2026-09-24** (throwaway, testnet only, in gitignored
+`.env`):
+- deployer `0xFBA2e9472B0746D57142548ADb520484B0036Eef`;
+- attestor signer `0x59cF63dfBc19D30648DEB94FCaDcC0164c8892FF`;
+- oracle keeper `0xaE3ABee2a4585f67d638C9c88FCB59ef50b20067`.
