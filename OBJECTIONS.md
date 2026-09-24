@@ -1283,3 +1283,151 @@ RUNNING_LOG, with the README explaining why.
 - Fund a fresh throwaway deployer from `faucet.monad.xyz`. It's a JavaScript
   page, so I can't read its limits.
 - Read the portal's bounty list and the Perpl terms (P3-O14).
+
+---
+
+# Phase 4 objections (full brief received 2026-09-24)
+
+P4-O1 (host, now "stable IP"), P4-O2 (push, done after a clean
+full-history scan) and P4-O3 (7-day oracle age) are approved. The items
+below are new, from reading the Phase 4 brief against the code and the
+evidence.
+
+**Faucet (§5, checked first, 2026-09-24):** faucet.monad.xyz gives "up to
+50 Testnet MON per 24 hours" per wallet (its FAQ), behind a browser
+verification step. Testnet gas price is 102 gwei. The local deploy uses
+6.78M gas across 10 transactions; Monad charges the gas *limit*, so about
+0.9 MON per deploy. **Budget through 12 Oct:** 3 deploys (rehearsal,
+final, spare) ≈ 3 MON; about 15 transactions per journey ≈ 0.5 MON, × 6
+(3 rehearsals, 3 takes) ≈ 3 MON; the adversarial pass ≈ 2 MON; daily
+oracle refresh ≈ 0.1 MON. **About 8 MON in total, one day's drip.** The
+constraint is the verification step, which I must not attempt. You claim
+it (twice, a day apart, for margin).
+
+## P4-O7. Rehearsing the loop on the production deployment poisons the demo wallet for 180 days
+
+**What the brief says:** §6, the full loop on testnet, three times, then
+film on the same infrastructure.
+
+**Why it's wrong:** liquidation is persistent by design. `recordLiquidation`
+writes `lastLiquidatedAt` into ScoreRegistry, and the attestor applies −72,
+the tier-C cap and (with a shortfall) the floor cap for 180 days. A
+liquidated rehearsal wallet can never show the "before" half of the loop
+again on that deployment. The indexer's history also keeps the rehearsal
+events, so the Activity page shows them on film.
+
+**Instead:** rehearse on deployment R, then deploy F fresh (same committed
+script) right before filming, and seed F. Both addresses are recorded in
+`deployments/10143.json` history and in the README (R marked "rehearsal").
+The indexer points at F. Cost: about 1 MON more.
+
+## P4-O8. "Fresh wallet each time" and the scored journey can't both hold
+
+**What the brief says:** §6, the journey three times, clean profile, fresh
+wallet each time.
+
+**Why it's wrong:** a fresh wallet has no borrowing history, so it can only
+ever be refused (INSUFFICIENT_HISTORY), and it would be priced at FLOOR. The
+scored half of the journey needs the Q5 wallet, and there's one of it.
+
+**Instead:** each rehearsal uses a clean browser profile, the **Q5 wallet**
+for the scored path on deployment R (liquidated once, which is the point),
+plus a fresh wallet for the unscored and refused paths. Three full scored
+rehearsals would need three history-bearing wallets or three deployments.
+I propose one full loop on R, two up to the liquidation, then F for filming.
+
+## P4-O9. "Stale score: rejected" is still wrong (O6, raised again at P4-O0)
+
+A stale score is **priced at FLOOR**. `effectiveTier` returns FLOOR. Only a
+borrow above FLOOR terms reverts (`ExceedsMaxBorrow`). The test is written
+that way; the rehearsal checklist will say "priced at FLOOR, amounts within
+FLOOR terms succeed, above them revert".
+
+## P4-O10. The consistency check can't be fired live on demand
+
+**Evidence:** run 2's refusal (`0x09f2…5bef`, Polygon `totalTxns` 0) was
+transient. Live today, Polygon returns `totalTxns` 479 and score 850, and
+Alchemy confirms its 9 Polygon borrows.
+
+**Instead:**
+- the adversarial pass cites the archived run-2 refusal
+  (`docs/distribution/pipeline-2026-09-23.jsonl`), with its timestamp;
+- the unit test shows the rule firing;
+- a **labelled replay** runs on the deployed attestor, recorded in
+  `/refusals`, with the notice field. Nothing labelled as live.
+
+## P4-O11. The Scroll borrower check only shows the full refusal while HyperSync works from the host
+
+Alchemy has no Scroll coverage, and ChainScore is never asked about
+Scroll. With HyperSync blocked, a Scroll borrow simply isn't seen, and the
+wallet's other chains decide. The UNAVAILABLE-for-Scroll path needs
+HyperSync to find the Scroll borrow. **Instead:** test it while HyperSync
+answers (it does as of 17:36 CDT today), and state in the README that a
+Scroll borrow is invisible when HyperSync is down. That's a real gap, not a
+test gap.
+
+## P4-O12. I can't create the Supabase, hosting or Envio Cloud accounts
+
+Creating accounts and authenticating are things I don't do. **Needs you:**
+1. A Supabase project (new, not ChainScore's): give me the Postgres
+   connection string in `.env`.
+2. A host account (Railway, Render or Fly): I recommend **Railway**, since
+   it deploys from the GitHub repo with a Dockerfile, and its static egress
+   IP is a paid add-on (price not verified by me). If there's no static IP,
+   P4-O1's "record the outbound IP" becomes "record it and note it can
+   change".
+3. Envio Cloud: sign in with GitHub and connect `DhrishJ/tenor`. I'll
+   supply the config, the root and the command.
+4. Vercel (or similar) for the web app, same pattern.
+
+I write the Postgres store, the Dockerfile and the deploy configs now,
+test them locally against a local Postgres, and hand you exact settings.
+
+## P4-O13. The keep-alive needs a signing key somewhere always-on
+
+The daily job must (a) sign an oracle price re-stamp and (b) query the
+Envio endpoint so it isn't idle-deleted. (a) needs the oracle owner's key.
+
+**Instead:** have the **attestor host** run both on a daily timer, with a
+separate throwaway `ORACLE_KEEPER` key. The deploy script transfers
+oracle ownership to it, so the deployer key never sits on a server. The
+same job pings the indexer. Its last run shows on `/health`, which is how
+"verify it fires" is checked. A GitHub Actions cron is the fallback, but it
+puts a key in GitHub secrets, and GitHub disables schedules on repos with
+no activity for 60 days (fine until the deadline).
+
+## P4-O14. A stable IP moves the HyperSync problem; it may not solve it
+
+If the block is per token rather than per IP, the host inherits it. §2
+already assumes HyperSync unresolved, so this changes nothing in the plan,
+but the README must not claim the host "fixed" HyperSync. Envio should be
+asked (P4-O1).
+
+## P4-O15. "The sample does support the rule" overstates it
+
+Four multi-chain wallets show that the minimum rule *changes outcomes* (tier
+in 2, 50+ below the average in 1). They can't show that it's *right*.
+**README wording:** "In our sample, the minimum rule changed the outcome
+for 2 of the 4 multi-chain wallets. Four wallets can't validate the rule;
+they show it isn't inert."
+
+## P4-O16. The clean-clone test needs a README setup section that doesn't exist yet
+
+I write it first (install, env, local anvil, attestor in fixture mode, web,
+indexer via Colima/Docker), then run the clone test in a new directory
+exactly as written, and record every place I had to deviate.
+
+## P4-O17. Slither needs a Python venv install
+
+Slither is on PyPI (`slither-analyzer`, from Trail of Bits). I install it
+into a venv under `~/.local`, pinned, as with the other tools.
+
+## Assumptions I'm least confident about
+
+1. **That ~0.9 MON per deploy holds.** It's from local gas at today's 102
+   gwei, and the gas-limit charge depends on forge's estimate multiplier. I
+   verify it on the first testnet deploy and adjust.
+2. **That the Q5 wallet arrives in time for rehearsals before filming.**
+   If it doesn't, the scored path can only be rehearsed with a history
+   wallet whose key we don't hold, which is impossible. The whole §6
+   scored subset then waits, and everything else goes ahead.
