@@ -49,6 +49,12 @@ contract Deploy is Script {
         registry.setMarket(address(market), true);
         oracle.setPrice(address(usd), 1e18);
         oracle.setPrice(address(coll), collPrice);
+        {
+            // Optional (OBJECTIONS P4-O13): the oracle keeper's own throwaway key
+            // takes over the mock oracle, so the deployer key never sits on a server.
+            address oracleOwner = vm.envOr("ORACLE_OWNER", address(0));
+            if (oracleOwner != address(0)) oracle.transferOwnership(oracleOwner);
+        }
 
         if (seed > 0) {
             // tUSD's initial supply (= seed) was minted to the deployer above.
@@ -66,6 +72,7 @@ contract Deploy is Script {
         vm.serializeAddress(o, "tCOLL", address(coll));
         vm.serializeAddress(o, "scoreRegistry", address(registry));
         vm.serializeAddress(o, "mockPriceOracle", address(oracle));
+        vm.serializeAddress(o, "oracleOwner", oracle.owner());
         vm.serializeAddress(o, "tenorMarket", address(market));
         vm.serializeString(o, "eip712Name", "Tenor ScoreRegistry");
         vm.serializeString(o, "eip712Version", "1");

@@ -200,6 +200,6 @@ describe('HTTP adapter', () => {
   it('health reports each dependency and 503 when any is down', async () => {
     const res = await app().request('/health')
     expect(res.status).toBe(503)
-    expect(await res.json()).toEqual({ ok: false, dependencies: [{ name: 'fake', ok: false, detail: 'down' }] })
+    expect(await res.json()).toEqual({ ok: false, status: 'degraded', dependencies: [{ name: 'fake', ok: false, detail: 'down' }] })
   })
 })

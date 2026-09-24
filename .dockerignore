@@ -1,0 +1,8 @@
+# Only what the attestor image copies; everything else (and every secret) stays out.
+**
+!packages/attestor/package.json
+!packages/attestor/package-lock.json
+!packages/attestor/src/**
+!packages/attestor/tsconfig.json
+!deployments/*.json
+deployments/31337.json

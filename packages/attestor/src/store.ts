@@ -53,6 +53,9 @@ export interface Store {
   hit(key: string, max: number, windowMs: number, nowMs: number): Promise<boolean>
   logRefusal(entry: RefusalEntry): Promise<void>
   listRefusals(limit: number): Promise<RefusalEntry[]>
+  /** Small operational values that must survive a restart (e.g. the keeper's last run). */
+  getMeta(key: string): Promise<string | undefined>
+  setMeta(key: string, value: string): Promise<void>
 }
 
 export class MemoryStore implements Store {
@@ -61,6 +64,7 @@ export class MemoryStore implements Store {
   private histories = new Map<string, { value: Record<ChainSlug, ChainHistory>; expiresAtMs: number }>()
   private hits = new Map<string, number[]>()
   private refusals: RefusalEntry[] = []
+  private meta = new Map<string, string>()
 
   async getChainScore(wallet: Address, chain: ChainSlug, nowMs: number) {
     const e = this.scores.get(`${wallet.toLowerCase()}:${chain}`)
@@ -115,5 +119,13 @@ export class MemoryStore implements Store {
 
   async listRefusals(limit: number) {
     return this.refusals.slice(-limit).reverse()
+  }
+
+  async getMeta(key: string) {
+    return this.meta.get(key)
+  }
+
+  async setMeta(key: string, value: string) {
+    this.meta.set(key, value)
   }
 }

@@ -96,7 +96,7 @@ export function createApp(d: HttpDeps) {
       }),
     )
     const ok = results.every((r) => r.ok)
-    return c.json({ ok, dependencies: results }, ok ? 200 : 503)
+    return c.json({ ok, status: ok ? 'ok' : 'degraded', dependencies: results }, ok ? 200 : 503)
   })
 
   return app

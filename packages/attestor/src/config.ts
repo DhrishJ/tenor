@@ -26,6 +26,15 @@ const envSchema = z.object({
   HISTORY_FIXTURE: z.string().optional(),
   RATE_LIMIT_PER_IP_PER_MIN: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_PER_ADDRESS_PER_MIN: z.coerce.number().int().positive().default(6),
+  /** Postgres (Supabase) for reservations, caches and the refusal log. Required off the local chain. */
+  DATABASE_URL: z.string().min(1).optional(),
+  /** PEM of the database server's CA (Supabase: Project Settings, Database, SSL). */
+  DATABASE_CA_CERT: z.string().min(1).optional(),
+  /** Throwaway key that owns the mock oracle and re-stamps it daily (OBJECTIONS P4-O13). Required off the local chain. */
+  ORACLE_KEEPER_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/, 'ORACLE_KEEPER_PRIVATE_KEY must be a 32-byte hex key').optional(),
+  KEEPER_INTERVAL_HOURS: z.coerce.number().positive().default(24),
+  /** Hosted indexer GraphQL URL; the keeper queries it so it isn't deleted for idleness. */
+  INDEXER_URL: z.string().url().optional(),
 })
 
 const deploymentSchema = z.object({
@@ -35,6 +44,10 @@ const deploymentSchema = z.object({
   attestor: z.string(),
   eip712Name: z.string(),
   eip712Version: z.string(),
+  mockPriceOracle: z.string().optional(),
+  tUSD: z.string().optional(),
+  tCOLL: z.string().optional(),
+  maxPriceAge: z.number().optional(),
 })
 
 export interface Config {
@@ -55,10 +68,19 @@ export interface Config {
   historyFixture: string | undefined
   rateLimitPerIp: number
   rateLimitPerAddress: number
+  databaseUrl: string | undefined
+  databaseCaCert: string | undefined
+  oracleKeeperKey: Hex | undefined
+  keeperIntervalMs: number
+  indexerUrl: string | undefined
+  oracle: { address: Address; tUSD: Address; tCOLL: Address; maxPriceAge: number } | undefined
 }
 
+export const LOCAL_CHAIN_ID = 31337
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const e = envSchema.parse(env)
+  // An empty variable means unset (hosting dashboards often leave them blank).
+  const e = envSchema.parse(Object.fromEntries(Object.entries(env).filter(([, v]) => v !== '')))
   const file = resolve(e.DEPLOYMENTS_DIR, `${e.CHAIN_ID}.json`)
   const dep = deploymentSchema.parse(JSON.parse(readFileSync(file, 'utf8')))
   if (dep.chainId !== e.CHAIN_ID) throw new Error(`${file} is for chain ${dep.chainId}, not ${e.CHAIN_ID}`)
@@ -80,5 +102,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     historyFixture: e.HISTORY_FIXTURE,
     rateLimitPerIp: e.RATE_LIMIT_PER_IP_PER_MIN,
     rateLimitPerAddress: e.RATE_LIMIT_PER_ADDRESS_PER_MIN,
+    databaseUrl: e.DATABASE_URL,
+    databaseCaCert: e.DATABASE_CA_CERT?.replace(/\\n/g, '\n'),
+    oracleKeeperKey: e.ORACLE_KEEPER_PRIVATE_KEY as Hex | undefined,
+    keeperIntervalMs: e.KEEPER_INTERVAL_HOURS * 3_600_000,
+    indexerUrl: e.INDEXER_URL,
+    oracle:
+      dep.mockPriceOracle && dep.tUSD && dep.tCOLL && dep.maxPriceAge
+        ? { address: getAddress(dep.mockPriceOracle), tUSD: getAddress(dep.tUSD), tCOLL: getAddress(dep.tCOLL), maxPriceAge: dep.maxPriceAge }
+        : undefined,
   }
 }
