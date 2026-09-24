@@ -5,7 +5,7 @@ import { useAccount, useReadContracts } from 'wagmi'
 import { contracts } from '@/config/network'
 import { MockERC20Abi, TenorMarketAbi } from '@/generated/abis'
 import { useTenorState, type TenorState } from '@/hooks/useTenorState'
-import { TERMS, tierFromIndex, type Tier } from '@/lib/tiers'
+import { FLOOR_TERMS, TERMS, tierFromIndex, type Tier } from '@/lib/tiers'
 import { healthFactor, pct, tokens, usd, when } from '@/lib/format'
 import { TxFlow, type TxSpec } from '@/components/market/TxFlow'
 import { Badge } from '@/components/ui/badge'
@@ -129,7 +129,10 @@ function PositionCard({ s }: { s: TenorState }) {
         </p>
       )}
       {!invalidated && s.score?.isStale && s.score.score > 0 && (
-        <p className="text-sm text-warning">Your on-chain score has expired: new borrows are priced at floor terms. Re-attest on the Score page.</p>
+        <p className="text-sm text-warning">
+          Your on-chain score has expired. You can still borrow at floor terms ({FLOOR_TERMS}); only amounts above that revert.
+          Re-attest on the Score page to restore your tier.
+        </p>
       )}
       {s.effectiveTier === 'FLOOR' && !s.score?.score && (
         <p className="text-sm text-muted">No score on-chain: you borrow at floor terms (60% max LTV). Nobody is turned away.</p>
@@ -173,7 +176,9 @@ function Actions({ wallet, s }: { wallet: Address; s: TenorState }) {
       if (s.market.paused) blocker = 'The market is paused: borrowing is disabled. Repay and withdrawals still work.'
       else if (s.maxBorrowError) blocker = 'The mock oracle price is stale: borrowing is disabled until it is refreshed.'
       else if (s.maxBorrow !== undefined && amount > s.maxBorrow)
-        blocker = `Above your maximum of ${tokens(s.maxBorrow, 'tUSD', 2)} (tier ${tier}: ${pct(TERMS[tier].maxLtvBps)} max LTV, ${tokens(TERMS[tier].walletCap, 'tUSD', 0)} per-wallet cap, market caps and liquidity).`
+        blocker = `Above your maximum of ${tokens(s.maxBorrow, 'tUSD', 2)} (tier ${tier}: ${pct(TERMS[tier].maxLtvBps)} max LTV, ${tokens(TERMS[tier].walletCap, 'tUSD', 0)} per-wallet cap, market caps and liquidity).${
+          s.score?.isStale && s.score.score > 0 ? ' Your score has expired, so floor terms apply; re-attest on the Score page to restore your tier.' : ''
+        }`
       else
         spec = {
           label: 'Borrow',

@@ -7,6 +7,7 @@ import { ScoreRegistryAbi } from '@/generated/abis'
 import { requestAttestation, type AttestResult } from '@/lib/attestor'
 import { explainError } from '@/lib/errors'
 import { duration, when } from '@/lib/format'
+import { FLOOR_TERMS } from '@/lib/tiers'
 import { useNow } from '@/hooks/useNow'
 import type { TenorState } from '@/hooks/useTenorState'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +30,7 @@ export function OnChainStatus({ s }: { s: TenorState }) {
         <span>
           On-chain Tenor score <span className="num font-semibold">{s.score.score}</span>
         </span>
-        {s.score.isStale ? <Badge tone="danger">stale: priced at floor</Badge> : <Badge tone="success">fresh</Badge>}
+        {s.score.isStale ? <Badge tone="warning">expired: floor terms apply</Badge> : <Badge tone="success">fresh</Badge>}
       </div>
       {invalidatedByLiquidation ? (
         <p className="mt-1 text-danger">
@@ -37,7 +38,10 @@ export function OnChainStatus({ s }: { s: TenorState }) {
           Request a fresh score: it will carry Tenor’s liquidation penalty and tier cap.
         </p>
       ) : s.score.isStale ? (
-        <p className="mt-1 text-warning">Expired at {when(s.score.expiresAt)}. Request a fresh attestation to restore your tier.</p>
+        <p className="mt-1 text-warning">
+          Expired at {when(s.score.expiresAt)}. You can still borrow at floor terms ({FLOOR_TERMS}). Request a fresh attestation to
+          restore your tier.
+        </p>
       ) : (
         <p className="mt-1 text-muted">
           Expires in <span className="num">{duration(remaining)}</span> (24-hour validity).

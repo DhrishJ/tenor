@@ -9,7 +9,6 @@ import { explorerTx } from '@/config/network'
 import { gql, type LiquidationRow, type WalletEventRow } from '@/lib/indexer'
 import { TERMS, scoreToTier, type Tier } from '@/lib/tiers'
 import { pct, shortAddr, tokens, usd, when } from '@/lib/format'
-import { useTenorState } from '@/hooks/useTenorState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardTitle, Label } from '@/components/ui/card'
 
@@ -49,7 +48,6 @@ interface WalletQuery {
 }
 
 function Loop({ wallet }: { wallet: Address }) {
-  const s = useTenorState(wallet)
   const data = useQuery({
     queryKey: ['loop', wallet],
     refetchInterval: 5_000,

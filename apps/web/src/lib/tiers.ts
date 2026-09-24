@@ -14,6 +14,9 @@ export const TERMS: Record<Tier, { maxLtvBps: number; ltBps: number; walletCap: 
   A: { maxLtvBps: 8000, ltBps: 8500, walletCap: 20_000n * 10n ** 18n, scores: '774–850' },
 }
 
+/** One phrase for "what an unscored or expired wallet can still do", used wherever a score is missing or stale. */
+export const FLOOR_TERMS = `${TERMS.FLOOR.maxLtvBps / 100}% max LTV, up to ${(TERMS.FLOOR.walletCap / 10n ** 18n).toLocaleString('en-US')} tUSD per wallet`
+
 export const tierFromIndex = (i: number | bigint): Tier => TIERS[Number(i)] ?? 'FLOOR'
 
 export function scoreToTier(score: number): Tier {
