@@ -1461,3 +1461,32 @@ All of P4-O7 to P4-O17 approved, with these additions:
 - deployer `0xFBA2e9472B0746D57142548ADb520484B0036Eef`;
 - attestor signer `0x59cF63dfBc19D30648DEB94FCaDcC0164c8892FF`;
 - oracle keeper `0xaE3ABee2a4585f67d638C9c88FCB59ef50b20067`.
+
+**2026-09-24:** the user approved the Phase 4 plan and the generated
+addresses. None was funded when checked (0 MON each).
+
+## P4-O18. (Found reading the portal) The Alchemy bounty may not count our Alchemy use
+
+**What the portal says:** the project must be "deployed on Monad" and
+integrate "any Alchemy service or developer tool that supports Monad".
+
+**Why it matters:** Tenor's Alchemy use (`alchemy_getAssetTransfers`) reads
+Aave history on Ethereum, Arbitrum, Optimism, Polygon and Base, never on
+Monad. A strict reading could exclude it.
+
+**Evidence:** the same key serves Monad testnet (`eth_chainId` → 0x279f,
+and `alchemy_getAssetTransfers` answers there), 2026-09-24.
+
+**Options:**
+1. **(Recommended)** Keep the claim as it is, and ask Alchemy on the
+   hackathon Discord whether off-Monad data use qualifies. Honest, with no
+   extra build.
+2. Also route the attestor's Monad reads (nonces, liquidation records) and
+   the keeper's transactions through Alchemy's Monad RPC, with the public
+   RPC as fallback. Real use on Monad, but it isn't load-bearing (removing it
+   breaks nothing), so it must not be *presented* as the reason the claim
+   qualifies.
+3. Downgrade Alchemy to USED if Alchemy says it doesn't qualify.
+
+**Needs:** your choice, and option 1's question asked by you (I don't post
+on your behalf).
