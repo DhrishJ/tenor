@@ -11,6 +11,8 @@ const nextConfig = {
       '@x402/evm': false,
       '@x402/extensions': false,
       '@x402/svm': false,
+      // Same pattern: MetaMask's SDK optionally imports React Native storage.
+      '@react-native-async-storage/async-storage': false,
     }
     return config
   },

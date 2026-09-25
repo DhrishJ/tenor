@@ -172,6 +172,8 @@ npm run dev
 ```
 
 It listens on :8787. `curl localhost:8787/health` lists every dependency.
+Without `ALCHEMY_API_KEY`, it reports `degraded`, because there's no history
+fallback. That's expected locally.
 Locally the store is in memory. With `DATABASE_URL` set, it uses Postgres,
 and off the local chain it refuses to start without Postgres. To replay
 recorded history instead of querying it live, add
@@ -189,7 +191,10 @@ ENVIO_API_TOKEN=<your token> npm run dev
 ```
 
 GraphQL is served at http://localhost:8080/v1/graphql. The local admin
-secret is Envio's dev default, `testing`.
+secret is Envio's dev default, `testing`. **After any local redeploy** (new
+addresses), Envio refuses to resume its old data. Start it with
+`npm run dev -- -r` to reset. With Colima instead of Docker Desktop, set
+`DOCKER_HOST=unix://$HOME/.colima/default/docker.sock` first.
 
 **5. Web app:**
 

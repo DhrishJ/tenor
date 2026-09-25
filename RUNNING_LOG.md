@@ -243,3 +243,19 @@ whose key you control. It blocks Phase 4 entirely. It was first asked on
 - **The real gap:** a wallet with borrowing on Ethereum *and* Scroll would
   be SCORED on Ethereum alone while HyperSync is down; the Scroll borrow is
   invisible. Goes in the README.
+
+## 2026-09-24: clean-clone test (§7, P4-O16)
+
+A fresh `git clone --recurse-submodules` of github.com/DhrishJ/tenor into a
+scratch directory, following README "Run it locally" word for word.
+
+| Step | Result |
+|---|---|
+| 1. `forge build`, `forge test` | Pass: 153/153 |
+| 2. anvil + deploy script | **Failed**: `vm.writeJson ... not allowed`. `deployments/` didn't exist in a clone (its only file is gitignored). **Fixed** (`deployments/README.md`); pulled, then passed. |
+| 3. attestor `npm ci`, `npm test`, run | Pass: 66 passed, 8 Postgres tests skipped without `TEST_DATABASE_URL` (as documented). `/health` degraded only for the missing Alchemy key (README now says so). A live `/score` gave SCORED 810, tier A, full verification, matching run 2. |
+| 4. indexer | **Failed on this machine**: Envio resumed old local data from a previous deployment and refused the new addresses. My first poll read that stale data and nearly counted as a pass; caught by checking `start_block`. Passed with `npm run dev -- -r`, now in the README. Colima needs `DOCKER_HOST` (README). |
+| 5. web | Pass: all four pages 200. In a browser, Market read 100,000 tUSD idle and the $2,000 mock price from the chain; Activity read the indexer. A MetaMask SDK optional-import warning is now aliased away. |
+
+**Not covered:** connecting a wallet (I don't connect the real browser
+extensions). Covered in the testnet rehearsal.
