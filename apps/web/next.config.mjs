@@ -13,6 +13,8 @@ const nextConfig = {
       '@x402/svm': false,
       // Same pattern: MetaMask's SDK optionally imports React Native storage.
       '@react-native-async-storage/async-storage': false,
+      // And WalletConnect's logger optionally imports a dev-only pretty printer.
+      'pino-pretty': false,
     }
     return config
   },
