@@ -79,8 +79,9 @@ contract('MemoryStore', async () => new MemoryStore())
 const url = process.env.TEST_DATABASE_URL
 describe.skipIf(!url)('PgStore', () => {
   const stores: PgStore[] = []
+  let scope = '10143:0xaaaa'
   const fresh = async () => {
-    const s = new PgStore({ connectionString: url! })
+    const s = new PgStore({ connectionString: url!, scope })
     stores.push(s)
     await s.migrate()
     return s
@@ -120,5 +121,21 @@ describe.skipIf(!url)('PgStore', () => {
     )
     expect(new Set(results.map((r) => r.payload.score)).size).toBe(1)
     expect(results.filter((r) => !r.reused)).toHaveLength(1)
+  })
+
+  it('a second deployment on the same chain shares no reservations, refusals or keeper state', async () => {
+    const V = '0x00000000000000000000000000000000000000d4' as Address
+    const r = await fresh()
+    await r.reserve(V, 0n, { ...att(8000, 9999, 610), wallet: V, nonce: 0n }, 8_000_000, 0)
+    await r.setMeta('keeper:lastRun', 'rehearsal')
+    await r.logRefusal({ at: 'x', requestId: 'rehearsal-refusal', endpoint: 'score', wallet: V, state: 'UNAVAILABLE', reason: 'r' })
+    scope = '10143:0xbbbb'
+    const f = await fresh()
+    const got = await f.reserve(V, 0n, { ...att(8001, 9999, 720), wallet: V, nonce: 0n }, 8_000_000, 0)
+    expect(got.reused).toBe(false)
+    expect(got.payload.score).toBe(720)
+    expect(await f.getMeta('keeper:lastRun')).toBeUndefined()
+    expect((await f.listRefusals(50)).map((x) => x.requestId)).not.toContain('rehearsal-refusal')
+    scope = '10143:0xaaaa'
   })
 })

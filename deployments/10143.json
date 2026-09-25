@@ -1,0 +1,15 @@
+{
+  "attestor": "0x59cF63dfBc19D30648DEB94FCaDcC0164c8892FF",
+  "chainId": 10143,
+  "deployer": "0xFBA2e9472B0746D57142548ADb520484B0036Eef",
+  "eip712Name": "Tenor ScoreRegistry",
+  "eip712Version": "1",
+  "maxPriceAge": 604800,
+  "mockPriceOracle": "0x0455C5258cDdbDe02026594D37959aE413858039",
+  "oracleOwner": "0xaE3ABee2a4585f67d638C9c88FCB59ef50b20067",
+  "scoreRegistry": "0x51c9e2F27d8E90A3A1feF894E6e60d1B739Ca098",
+  "startBlock": 65456372,
+  "tCOLL": "0x2BE644f7F9410B6151A9682B8f6542eaFE72443b",
+  "tUSD": "0xD4046a56F9695644d9336018932f317D58399507",
+  "tenorMarket": "0x66DCA766F95c3108b70ba4ee0a8f45E84E514408"
+}

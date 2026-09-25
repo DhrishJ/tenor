@@ -55,7 +55,7 @@ if (cfg.chainId !== LOCAL_CHAIN_ID) {
 }
 let store: Store
 if (cfg.databaseUrl) {
-  const pgStore = new PgStore({ connectionString: cfg.databaseUrl, caCert: cfg.databaseCaCert })
+  const pgStore = new PgStore({ connectionString: cfg.databaseUrl, scope: `${cfg.chainId}:${cfg.registry}`, caCert: cfg.databaseCaCert })
   await pgStore.migrate()
   store = pgStore
 } else {

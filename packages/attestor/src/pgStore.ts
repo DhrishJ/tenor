@@ -4,6 +4,11 @@
  * reservations above all, plus caches, rate-limit counters, the refusal log
  * and keeper metadata.
  *
+ * Scoped per deployment (chain id + registry address): reservations, the
+ * refusal log and keeper metadata belong to one deployment, and a rehearsal
+ * and a final deployment on the same chain may share a database. The score
+ * and history caches describe mainnet wallets, so they are shared.
+ *
  * Rate limits use a fixed window here (the in-memory store uses a sliding
  * one): one upsert per hit, and at most 2x the limit across a window edge.
  */
@@ -30,6 +35,8 @@ create table if not exists tenor_refusals (
   id bigserial primary key, entry jsonb not null);
 create table if not exists tenor_meta (
   key text primary key, value text not null);
+alter table tenor_refusals add column if not exists scope text;
+create index if not exists tenor_refusals_scope on tenor_refusals (scope, id);
 `
 
 /** Attestation carries bigints; JSON can't. */
@@ -51,14 +58,18 @@ const decode = (e: Encoded): Attestation => ({
 
 export interface PgStoreOptions {
   connectionString: string
+  /** Deployment this service instance serves, e.g. "10143:0xregistry". */
+  scope: string
   /** PEM of the server's CA (Supabase publishes one). Omit for a local database without TLS. */
   caCert?: string
 }
 
 export class PgStore implements Store {
   readonly pool: pg.Pool
+  private readonly scope: string
 
   constructor(opts: PgStoreOptions) {
+    this.scope = opts.scope.toLowerCase()
     this.pool = new pg.Pool({
       connectionString: opts.connectionString,
       max: 5,
@@ -114,7 +125,7 @@ export class PgStore implements Store {
   // concurrent requests for one (wallet, nonce) serialize on the row lock and
   // the second sees the first's payload.
   async reserve(wallet: Address, nonce: bigint, payload: Attestation, nowMs: number, lastLiquidatedAt: number) {
-    const w = wallet.toLowerCase()
+    const w = `${this.scope}:${wallet.toLowerCase()}`
     const n = nonce.toString()
     const c = await this.pool.connect()
     try {
@@ -169,26 +180,26 @@ export class PgStore implements Store {
   }
 
   async logRefusal(entry: RefusalEntry) {
-    await this.pool.query('insert into tenor_refusals (entry) values ($1)', [JSON.stringify(entry)])
+    await this.pool.query('insert into tenor_refusals (scope, entry) values ($1, $2)', [this.scope, JSON.stringify(entry)])
   }
 
   async listRefusals(limit: number) {
     const r = await this.pool.query<{ entry: RefusalEntry }>(
-      'select entry from tenor_refusals order by id desc limit $1',
-      [limit],
+      'select entry from tenor_refusals where scope = $1 order by id desc limit $2',
+      [this.scope, limit],
     )
     return r.rows.map((x) => x.entry)
   }
 
   async getMeta(key: string) {
-    const r = await this.pool.query<{ value: string }>('select value from tenor_meta where key = $1', [key])
+    const r = await this.pool.query<{ value: string }>('select value from tenor_meta where key = $1', [`${this.scope}:${key}`])
     return r.rows[0]?.value
   }
 
   async setMeta(key: string, value: string) {
     await this.pool.query(
       'insert into tenor_meta (key, value) values ($1, $2) on conflict (key) do update set value = excluded.value',
-      [key, value],
+      [`${this.scope}:${key}`, value],
     )
   }
 }

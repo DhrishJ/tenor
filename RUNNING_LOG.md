@@ -259,3 +259,51 @@ scratch directory, following README "Run it locally" word for word.
 
 **Not covered:** connecting a wallet (I don't connect the real browser
 extensions). Covered in the testnet rehearsal.
+
+## 2026-09-24/25: rehearsal deployment R on Monad testnet
+
+- **Faucet:** 5 MON claimed by the user (the FAQ says "up to 50").
+- **Deploy (committed script, `--slow`):** 0.921 MON; matches the
+  0.91 estimate. Deployer `0xFBA2…6Eef`, start block 65456372.
+
+| Contract | Address (rehearsal R) |
+|---|---|
+| tUSD | `0xD4046a56F9695644d9336018932f317D58399507` |
+| tCOLL | `0x2BE644f7F9410B6151A9682B8f6542eaFE72443b` |
+| ScoreRegistry | `0x51c9e2F27d8E90A3A1feF894E6e60d1B739Ca098` |
+| MockPriceOracle | `0x0455C5258cDdbDe02026594D37959aE413858039` |
+| TenorMarket | `0x66DCA766F95c3108b70ba4ee0a8f45E84E514408` |
+
+- **Checked on-chain:**
+  - registry attestor = `0x59cF…92FF`;
+  - market registered;
+  - oracle owner = keeper `0xaE3A…0067`;
+  - totalAssets 100,000 tUSD;
+  - maxPriceAge 604800;
+  - not paused.
+- **Verified:** all 5 through Sourcify BlockVision
+  (`forge verify-contract <addr> <Name> --chain 10143 --verifier sourcify
+  --verifier-url https://sourcify-api-monad.blockvision.org/`).
+  - Settings: Foundry 1.8.3, solc 0.8.36, evm prague, optimizer 200 runs,
+    `cbor_metadata = true`, `bytecode_hash = "none"`,
+    `use_literal_content = true`.
+  - Sourcify reports `match` (runtime). `exact_match` is impossible by
+    design with `bytecode_hash = "none"`.
+  - The MonadVision Contract tab shows the verified check.
+- **Keeper:** funded with 0.3 MON. A manual run
+  (`scripts/keeper-once.ts`) re-stamped both prices on testnet.
+- **Bug found and fixed:** the Postgres store wasn't scoped per deployment.
+  - A keeper record from a local test appeared as testnet's "last run", and
+    would have suppressed the real first run for about 20 h.
+  - Rehearsal and final deployments on the same chain could have shared
+    nonce reservations.
+  - Reservations, refusals and keeper metadata are now scoped by
+    `chainId:registry`, with a test.
+  - After the fix, the keeper ran on start and re-stamped the prices.
+- **§5 "an attestation lands on testnet":** a live SCORED attestation
+  (wallet `0x0A11…Bf6A`, score 810, tier A, full verification via
+  HyperSync) was relayed by the deployer. Tx
+  `0xc90de7fa405a62b8baf92b2b3ae739ad1cf1d226a43b08d5d7660f785f29c871`.
+  - `getScore` gives 810, fresh; `effectiveTier` gives A; nonce is 1.
+  - No `IssuedInFuture`. The attestor ran locally against testnet (hosting
+    accounts pending).
