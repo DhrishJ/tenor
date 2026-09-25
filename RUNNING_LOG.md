@@ -307,3 +307,9 @@ extensions). Covered in the testnet rehearsal.
   - `getScore` gives 810, fresh; `effectiveTier` gives A; nonce is 1.
   - No `IssuedInFuture`. The attestor ran locally against testnet (hosting
     accounts pending).
+- **§2 precursor (local, not yet on hosted infrastructure):** wallet
+  `0x033b…dcbf` (Aave-only, Ethereum), HyperSync forced down, Alchemy up →
+  SCORED 850, tier A. Verification `partial`, with the source per chain
+  (alchemy) and the gaps (Compound on Ethereum, Avalanche, Scroll)
+  reported (`docs/adversarial/alchemy-only-scored-2026-09-25.json`).
+  **Alchemy stays USED** until this is repeated on the hosted attestor (§2).

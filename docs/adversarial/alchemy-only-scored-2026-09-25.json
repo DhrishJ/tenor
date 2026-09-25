@@ -1,0 +1,124 @@
+{
+ "at": "2026-09-25T02:39:51.725Z",
+ "chainscoreQueried": [
+  "ethereum",
+  "avalanche"
+ ],
+ "result": {
+  "state": "SCORED",
+  "chainscoreScore": 850,
+  "aggregation": {
+   "rule": "minimum",
+   "description": "Lowest ChainScore across chains with verified borrowing history (conservative heuristic)"
+  },
+  "adjustments": [],
+  "policyCaps": [],
+  "tenorScore": 850,
+  "tier": "A",
+  "issuedAt": 1790303987,
+  "expiresAt": 1790390387,
+  "modelVersion": "v5-xgb-cal",
+  "contributingChains": [
+   {
+    "chain": "ethereum",
+    "name": "Ethereum",
+    "chainscoreScore": 850,
+    "aaveBorrows": 1,
+    "compoundBorrows": 0,
+    "verifiedBy": "alchemy"
+   }
+  ],
+  "excludedChains": [
+   {
+    "chain": "arbitrum",
+    "name": "Arbitrum",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "optimism",
+    "name": "Optimism",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "polygon",
+    "name": "Polygon",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "base",
+    "name": "Base",
+    "reason": "no Aave or Compound borrowing found on-chain (alchemy)"
+   },
+   {
+    "chain": "scroll",
+    "name": "Scroll",
+    "reason": "unverified: independent history check unavailable, and ChainScore does not score Scroll"
+   },
+   {
+    "chain": "avalanche",
+    "name": "Avalanche",
+    "reason": "unverified: independent check unavailable; ChainScore reports no borrowing here"
+   }
+  ],
+  "history": {
+   "verification": "partial",
+   "sources": [
+    {
+     "chain": "ethereum",
+     "name": "Ethereum",
+     "source": "alchemy",
+     "unverified": [
+      "compound"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "arbitrum",
+     "name": "Arbitrum",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "optimism",
+     "name": "Optimism",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "polygon",
+     "name": "Polygon",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "base",
+     "name": "Base",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "avalanche",
+     "name": "Avalanche",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Avalanche"
+    },
+    {
+     "chain": "scroll",
+     "name": "Scroll",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Scroll"
+    }
+   ]
+  }
+ }
+}
