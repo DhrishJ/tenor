@@ -186,8 +186,8 @@ is then labelled FIXTURE, and it refuses to start on any chain but 31337.
 cd indexer
 npm ci
 npm run abis
-CHAIN_ID=31337 RPC_URL=http://127.0.0.1:8545 npm run config
-ENVIO_API_TOKEN=<your token> npm run dev
+CHAIN_ID=31337 RPC_URL=http://127.0.0.1:8545 npm run config   # writes config.local.yaml
+ENVIO_CONFIG=config.local.yaml ENVIO_API_TOKEN=<your token> npm run dev
 ```
 
 GraphQL is served at http://localhost:8080/v1/graphql. The local admin

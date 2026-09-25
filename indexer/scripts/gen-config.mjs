@@ -1,7 +1,7 @@
 // Writes config.yaml from deployments/<CHAIN_ID>.json, the single source of
 // contract addresses (written by contracts/script/Deploy.s.sol).
 //   CHAIN_ID=10143 node scripts/gen-config.mjs   Monad testnet: HyperSync + RPC fallback
-//   CHAIN_ID=31337 RPC_URL=http://127.0.0.1:8545 node scripts/gen-config.mjs   local anvil: RPC only
+//   CHAIN_ID=31337 RPC_URL=http://127.0.0.1:8545 node scripts/gen-config.mjs   local anvil: RPC only (config.local.yaml)
 import { readFileSync, writeFileSync } from 'node:fs'
 const chainId = Number(process.env.CHAIN_ID)
 if (!chainId) throw new Error('CHAIN_ID not set')
@@ -50,5 +50,9 @@ ${rpcBlock}    contracts:
       - name: TenorMarket
         address: "${dep.tenorMarket}"
 `
-writeFileSync(new URL('../config.yaml', import.meta.url), yaml)
-console.log(`config.yaml for chain ${chainId}, start block ${dep.startBlock}`)
+// config.yaml is the committed testnet config (Envio Cloud's default path).
+// A local chain gets config.local.yaml (gitignored); run it with
+// ENVIO_CONFIG=config.local.yaml.
+const out = chainId === 31337 ? 'config.local.yaml' : 'config.yaml'
+writeFileSync(new URL(`../${out}`, import.meta.url), yaml)
+console.log(`${out} for chain ${chainId}, start block ${dep.startBlock}`)
