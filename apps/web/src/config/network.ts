@@ -43,7 +43,8 @@ export const services = {
   indexerDevSecret: process.env.NEXT_PUBLIC_INDEXER_DEV_SECRET ?? '',
 }
 
-export const devWallet = (process.env.NEXT_PUBLIC_DEV_WALLET || undefined) as Address | undefined
+/** LOCAL ANVIL ONLY. Ignored on any other chain, whatever the environment says. */
+export const devWallet = (chainId === 31337 ? process.env.NEXT_PUBLIC_DEV_WALLET || undefined : undefined) as Address | undefined
 
 export function explorerTx(hash: string) {
   return explorerUrl ? `${explorerUrl.replace(/\/$/, '')}/tx/${hash}` : undefined
