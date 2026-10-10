@@ -346,3 +346,19 @@ extensions). Covered in the testnet rehearsal.
   service, requested again: **identical payload and signature** (nonce 0,
   issuedAt 1791658411). The keeper's last-run record also survived, and
   it did not re-run early.
+- **§2, on the deployed service:**
+  - Added a test-only `HISTORY_PRIMARY=off` switch; `/health` showed
+    DEGRADED while it was on.
+  - First attempt replayed **cached** HyperSync history, so the switch now
+    also bypasses the history cache.
+  - Result: `0x033B…dCbF` SCORED 850, tier A, through **Alchemy alone**.
+    Verification `partial`; Compound (Ethereum), Avalanche and Scroll
+    reported unverified.
+  - The switch was then removed, and `/health` is back to ok on every
+    check. **Alchemy → CLAIMED** (P4-O18 still open).
+- **Live consistency-check refusal (incidental):** while looking for
+  test wallets, `0x0199…887d` was refused: "Arbitrum: ChainScore's
+  transaction history is empty for a wallet with 3 on-chain borrow(s)".
+  Five recent Ethereum borrowers were refused for a **history mismatch**:
+  ChainScore reports no borrowing, the chain shows 16–274 borrows.
+  ChainScore's data appears to lag recent borrowing.
