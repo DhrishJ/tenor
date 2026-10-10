@@ -1490,3 +1490,176 @@ and `alchemy_getAssetTransfers` answers there), 2026-09-24.
 
 **Needs:** your choice, and option 1's question asked by you (I don't post
 on your behalf).
+
+---
+
+# Phase 5 objections (brief received 2026-10-10)
+
+## P5-O1. BLOCKING: the demo premise is half false. The Score and Compare pages only show the connected wallet
+
+**What the brief says (§1):** verify that relaying is permissionless, and
+that Score and Compare "render fully for it with no connected wallet or
+with a different wallet connected". If either is false, stop.
+
+- **Relaying: TRUE.** On 2026-09-24 the deployer relayed `0x0A11…Bf6A`'s
+  attestation (tx `0xc90de7fa…f29c871`). `submitAttestation` has no
+  `msg.sender` check; the signature binds the wallet.
+- **Rendering: FALSE.** `apps/web/src/app/page.tsx` and
+  `app/compare/page.tsx` read only `useAccount()`. With no wallet connected,
+  they show "connect a wallet". There's no way to view an address you
+  don't control. Only Activity accepts `?wallet=`.
+
+**Instead (about 2 h):**
+- Add a read-only view mode, `?wallet=0x…`, to Score and Compare.
+- A persistent banner: "Viewing 0x0A11…Bf6A, a real borrower's address.
+  You are not connected as this wallet; borrowing is disabled. Anyone can
+  relay its attestation."
+- The live evaluation, itemization and chains come from the attestor. The
+  on-chain score is read from the registry. Borrow controls are hidden.
+- The relay button stays, labelled as a relay. It's permissionless, so a
+  judge can refresh an expired score themselves.
+
+## P5-O2. The demo wallet you chose can't be scored if HyperSync is blocked at filming time
+
+`0x0A11…Bf6A` borrowed only through Compound on Ethereum (2 borrows, no
+Aave). The Alchemy fallback sees only Aave, so with HyperSync down, the
+wallet has no verified chain and can't be SCORED. HyperSync has blocked us
+twice.
+
+**Instead:** use `0x033b…dcbf`. It's Aave-only on Ethereum, and scored 850
+(tier A) through **either** source, including Alchemy alone with HyperSync
+down (`docs/adversarial/alchemy-only-scored-2026-09-25.json`). Either way
+it's a real borrower's address relayed, with the same honesty rules.
+
+## P5-O3. REFUSE: the loop segment as written describes things no test or live run shows
+
+**What the brief says:** show the Foundry journey test, labelled TEST,
+over "ChainScore 850, minus 72, tier-C cap, shortfall cap, final 451, the
+same collateral supporting 600 instead of 800".
+
+**Evidence:**
+- `test_journey_liquidationFeedsBackIntoTerms` hand-signs a score of
+  **600** (tier C), and capacity goes from **$1,600 to $1,400**. It contains
+  no −72, no policy caps, and no 451. The policy is TypeScript (attestor),
+  not Solidity.
+- The numbers 451 and "600 instead of 800" come from the **Phase 3 local
+  walkthrough**: local anvil, an **impersonated** public wallet, and
+  **FIXTURE** history. Filming it breaks two of the brief's own rules.
+- The 451 chain *is* tested, in `packages/attestor/test/service.test.ts`
+  ("shortfall: capped at 451 (FLOOR) and every step itemized"). It starts
+  at **800**, not 850: 800 − 72 = 728 → tier-C cap 642 → shortfall cap 451.
+
+**Instead, each part labelled as what it is:**
+1. **LIVE on the final deployment, wallets we control:**
+   - an unscored wallet deposits collateral and borrows at floor terms;
+   - the oracle keeper drops the mock price, labelled MOCK ORACLE on screen;
+   - our second wallet liquidates;
+   - the registry records the liquidation, and the Activity page shows it.
+
+   These are real transactions with explorer links. Then the price is
+   restored.
+2. **TEST:** the attestor's itemization test running, with its numbers
+   read as the test's (800 → 728 → 642 → 451).
+3. **COMPUTED:** the capacity effect at the live wallet's actual
+   collateral, from the published tier terms (80% at A vs 60% at FLOOR),
+   labelled as computed.
+
+## P5-O4. REFUSE "roughly 40% of real borrowers unscoreable"
+
+That generalizes 8 of 20 wallets to "real borrowers". **Use:** "In a
+sample of 50 historical borrowers, 8 of the 20 we could fully check were
+refused, because they borrowed on Base or Optimism, where our upstream's
+data is degraded."
+
+## P5-O5. REFUSE "a single admin key over oracle, attestor, registry and market"
+
+That's been false since P4-O13. There are three keys, all held by the
+founder:
+- **Deployer:** owns the market (pause, caps) and the registry (can rotate
+  the attestor).
+- **Oracle keeper:** owns the mock oracle (can set any price).
+- **Attestor:** signs scores.
+
+The trust point stands (one person controls everything); the sentence
+must be accurate.
+
+## P5-O6. "Bounded by the 48-hour attestation lifetime": it's 24 hours
+
+Tenor issues 24-hour attestations (`SCORE_TTL_SECONDS=86400`). 48 hours is
+the most the registry *accepts*. **Use:** "24 hours as issued; the registry
+caps any attestation at 48."
+
+## P5-O7. REFUSE two pitch sentences
+
+- **"Tenor is the second half of a product that exists, not a hackathon
+  demo."** Tenor is a hackathon build: testnet, mock oracle, unaudited.
+  **Use:** "ChainScore is live with a public API. Tenor is the lending
+  market built on it during this hackathon."
+- **The ChainScore bug (#21) as traction.** ChainScore is your own API.
+  Finding a bug in your own upstream is integrity evidence, not traction.
+  It belongs in the integrity part of the pitch. The traction section
+  stays what it is: testnet journeys by people who aren't us, counted from
+  the indexer.
+
+## P5-O8. "A normal liquidation costs the lender nothing" needs its condition
+
+It's true only if the liquidation lands before collateral value falls
+below the debt. Higher-LTV tiers have thinner buffers, so a gap move is
+likelier to leave a shortfall, which hits reserves and then lenders.
+`test_journey_badDebtIsAccountedNotHidden` shows exactly this. **Use:**
+"…costs the lender nothing when it lands before collateral falls below
+debt. A gap move can leave a shortfall, absorbed by reserves first and then
+by lenders, and higher tiers have thinner buffers."
+
+## P5-O9. The 810 wallet has no Tenor adjustments, so "each policy adjustment named" shows none
+
+A real borrower with no Tenor history has no adjustments, so its
+itemization reads 810 → 810 (or 850 → 850). Say that on screen ("no Tenor
+history, so no adjustments"), and show what adjustments look like in the
+TEST segment (P5-O3).
+
+## P5-O10. "Relay the 810 attestation to the NEW registry" can't be done; it needs a fresh one
+
+Attestations are bound to the registry address (EIP-712
+`verifyingContract`), so the old signature is invalid on the new registry.
+The new registry needs a **fresh live evaluation**, which may not return
+the same score. Film whatever it returns.
+
+## P5-O11. Things only you can do
+
+- **Discord post (§6):** I don't post on your behalf. I'll draft it, and
+  count completions from the indexer: distinct wallets with a `Borrowed`
+  event on the final deployment, excluding our own addresses.
+- **Recording both videos, and the pitch's named first user.**
+- **§8 "a browser never used for this project, full journey":** needs a
+  wallet extension, and I don't use your real ones.
+- **Hosting sign-ins:** still pending. Everything in §2 waits on them.
+
+## P5-O12. "A stable IP" on Railway is likely a paid feature (not verified)
+
+I'll record the observed outbound IP and whether Railway marks it static.
+If it isn't, the README says so (P4-O14 already says a new IP may not fix
+HyperSync).
+
+## P5-O13. The hosted Alchemy-only check needs a switch
+
+There's no runtime way to turn HyperSync off on the deployed service. I'll
+add a test-only `HISTORY_PRIMARY=off` flag, set it for one run on Railway,
+record the result, then remove it.
+
+## P5-O14. Precision on the model label (§7)
+
+Accurate wording, from `LABELS.md`: the model is trained on whether a
+(wallet, chain) pair that had borrowed before 2024-06-01 was **liquidated
+on that chain between 2024-06-01 and 2024-12-01**. It's a
+liquidation-in-window proxy, not default. **No metrics reproduced this
+week**, and INVENTORY flagged possible label leakage in the top
+reliability bin, so the README claims none.
+
+## Least-confident assumptions
+
+1. **That Vercel deploys as simulated.** The install command and ABI
+   snapshot were tested in a local simulation, never on Vercel itself.
+2. **That a fresh evaluation of the demo wallet on 11 Oct still returns
+   tier A.** ChainScore and history data can change, and P5-O10 makes a
+   fresh evaluation unavoidable.
