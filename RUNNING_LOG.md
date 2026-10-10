@@ -332,3 +332,17 @@ extensions). Covered in the testnet rehearsal.
   - Plan limits: 750 indexing hours, ~0.1M events, **100 queries/min**.
 - **SC-2:** the HyperSync "blocks" are a safebrowse.io web filter on this
   network (OBJECTIONS SC-2).
+- **Hosted attestor live:** `https://tenor-production-1e06.up.railway.app`.
+  - First deploy crashed with `missing_production_config: DATABASE_URL`
+    (an empty value; the user fixed it). The refuse-to-start guard worked
+    as designed.
+  - `/health` ok on every check, including **HyperSync HTTP 200 from
+    Railway** (SC-2 confirmed: the blocks were local).
+  - **Keeper fired on the host** (18:52 UTC): re-stamped the stale
+    rehearsal prices (tx `0x2a7925d6…`, `0x36057f4b…`) and pinged the
+    hosted indexer.
+- **§5 restart check, hosted:** wallet `0x033B…dCbF` → SCORED 850 tier A,
+  full verification (HyperSync on all 7 chains). Restarted the Railway
+  service, requested again: **identical payload and signature** (nonce 0,
+  issuedAt 1791658411). The keeper's last-run record also survived, and
+  it did not re-run early.
