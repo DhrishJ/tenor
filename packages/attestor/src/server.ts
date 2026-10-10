@@ -72,6 +72,7 @@ const service = new AttestationService({
   log: jsonLogger,
   scoreTtlSeconds: cfg.scoreTtlSeconds,
   submitWindowSeconds: cfg.submitWindowSeconds,
+  historyCache: !cfg.historyPrimaryOff,
 })
 
 const health: HealthCheck[] = [

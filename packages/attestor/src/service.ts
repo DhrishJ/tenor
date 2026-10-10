@@ -105,6 +105,9 @@ export interface ServiceDeps {
   scoreTtlSeconds: number
   /** How long a signed payload may wait before submission. */
   submitWindowSeconds: number
+  /** false: never read or write the history cache. Set while the
+   *  HISTORY_PRIMARY=off test switch is on, so the test hits the live fallback. */
+  historyCache?: boolean
 }
 
 /*
@@ -382,12 +385,13 @@ export class AttestationService {
   /** History results are cached for the score TTL (only when every chain was
    *  checked, so a partial result is retried next time). */
   private async historyFor(wallet: Address, nowMs: number, bypass: boolean) {
-    if (!bypass) {
+    const useCache = this.d.historyCache !== false
+    if (!bypass && useCache) {
       const hit = await this.d.store.getHistory(wallet, nowMs)
       if (hit) return hit
     }
     const h = await this.d.history.check(wallet)
-    if (COVERED_CHAINS.every((c) => h[c.slug].ok)) {
+    if (useCache && COVERED_CHAINS.every((c) => h[c.slug].ok)) {
       await this.d.store.putHistory(wallet, h, nowMs + this.d.scoreTtlSeconds * 1000)
     }
     return h
