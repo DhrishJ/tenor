@@ -313,3 +313,22 @@ extensions). Covered in the testnet rehearsal.
   (alchemy) and the gaps (Compound on Ethereum, Avalanche, Scroll)
   reported (`docs/adversarial/alchemy-only-scored-2026-09-25.json`).
   **Alchemy stays USED** until this is repeated on the hosted attestor (§2).
+
+## 2026-10-10: hosting, and the real cause of the HyperSync "blocks"
+
+- **Supabase:** project "Tenor" (us-east-2), session pooler. Created by
+  the user; TLS to the pooler verified against Supabase Root 2021 CA.
+- **Railway:**
+  - Railway App installed, limited to DhrishJ/tenor.
+  - Service builds from `/packages/attestor/Dockerfile` (set in the
+    dashboard; config-as-code is unavailable to new services).
+  - Domain `tenor-production-1e06.up.railway.app` → 8787. Trial: "30 days
+    or $5".
+- **Envio Cloud:**
+  - Envio Deployments app installed, limited to DhrishJ/tenor.
+  - Indexer `tenor` (Development plan, release branch `envio`, root
+    `indexer`). Deployment 8937967: synced 100% on Monad testnet,
+    **Source: HyperSync**, 2 events.
+  - Plan limits: 750 indexing hours, ~0.1M events, **100 queries/min**.
+- **SC-2:** the HyperSync "blocks" are a safebrowse.io web filter on this
+  network (OBJECTIONS SC-2).

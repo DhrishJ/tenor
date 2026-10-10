@@ -1663,3 +1663,37 @@ reliability bin, so the README claims none.
 2. **That a fresh evaluation of the demo wallet on 11 Oct still returns
    tier A.** ChainScore and history data can change, and P5-O10 makes a
    fresh evaluation unavoidable.
+
+## Self-correction SC-2 (2026-10-10): the "HyperSync blocks this machine" story was wrong
+
+**What I claimed:** P3-O17, P4-O1, P4-O14, RUNNING_LOG and the README said
+HyperSync refused this machine's connections (an IP or token block by
+Envio), and that moving the attestor might not help.
+
+**What it actually is:** a **web filter on the development machine's
+network, safebrowse.io**. A plain-HTTP request to port 443 of an Envio data
+host returns `302 Location: https://www.safebrowse.io/warn.html?url=…`.
+Every TLS client then sees a non-TLS reply:
+- curl: "tlsv1 alert protocol version";
+- Node: "wrong version number";
+- Chrome: an error page.
+
+It affects `*.hypersync.xyz` and `*.hyperindex.xyz`; `envio.dev` is fine.
+DNS answers correctly (same IPs as 1.1.1.1). The interception happens on
+the connection.
+
+**What I can't prove:** that the 22 and 23 Sep episodes had the same
+cause. The symptoms (TLS rejections, intermittent, docs host reachable)
+match, so "most likely".
+
+**Consequences:**
+- The hosted attestor (Railway) and judges' browsers are unaffected. This
+  is local to the development machine's network.
+- **Filming from this machine would break the Activity page** (the browser
+  calls the indexer directly), and any live HyperSync use from here.
+- The README's HyperSync limitation is rewritten (final pass). The
+  Alchemy fallback is still worth having, as a second independent source,
+  not as a fix for a block that didn't exist.
+- **Needs you:** find where safebrowse runs (router, ISP filter, or
+  software on the Mac) and allow `*.hypersync.xyz` and `*.hyperindex.xyz`
+  before filming. Otherwise film on another network.
