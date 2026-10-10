@@ -17,10 +17,31 @@ import { Card, CardTitle, Label } from '@/components/ui/card'
 type Signed = Extract<AttestResult, { state: 'SCORED' }> & { signature: Hex; attestation: NonNullable<Extract<AttestResult, { state: 'SCORED' }>['attestation']> }
 
 /** What the registry currently holds for this wallet, and why it is stale if it is. */
-export function OnChainStatus({ s }: { s: TenorState }) {
+export function OnChainStatus({ s, viewing = false }: { s: TenorState; viewing?: boolean }) {
   const now = useNow()
   if (!s.score) return <div className="h-14" />
-  if (s.score.score === 0) return <p className="text-sm text-muted">No score on-chain yet. Until you submit one, this wallet borrows at floor terms.</p>
+  if (s.score.score === 0)
+    return (
+      <p className="text-sm text-muted">
+        No score on-chain yet. {viewing ? 'Until one is relayed, this address' : 'Until you submit one, this wallet'} borrows at floor terms.
+      </p>
+    )
+  if (viewing)
+    return (
+      <div className="text-sm">
+        <div className="flex items-center gap-2">
+          <span>
+            On-chain Tenor score <span className="num font-semibold">{s.score.score}</span>
+          </span>
+          {s.score.isStale ? <Badge tone="warning">expired: floor terms apply</Badge> : <Badge tone="success">fresh</Badge>}
+        </div>
+        <p className="mt-1 text-muted">
+          {s.score.isStale
+            ? `Expired at ${when(s.score.expiresAt)}. This address would borrow at floor terms (${FLOOR_TERMS}) until a fresh attestation is relayed.`
+            : `Relayed to the registry; expires in ${duration(Number(s.score.expiresAt) - now)} (24-hour validity).`}
+        </p>
+      </div>
+    )
   const liq = s.liquidation
   const invalidatedByLiquidation = s.score.isStale && liq && liq.liquidationCount > 0 && liq.lastLiquidatedAt >= s.score.issuedAt
   const remaining = Number(s.score.expiresAt) - now
@@ -167,6 +188,20 @@ export function AttestPanel({ wallet, state }: { wallet: Address; state: TenorSt
       )}
       {info && <p className="text-sm text-success">{info}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
+    </Card>
+  )
+}
+
+/** Read-only view (P5-O1): status only. Nothing here acts for the viewed address. */
+export function ViewOnlyAttestation({ state }: { state: TenorState }) {
+  return (
+    <Card className="space-y-3">
+      <CardTitle>On-chain attestation</CardTitle>
+      <OnChainStatus s={state} viewing />
+      <p className="text-xs text-muted">
+        Submitting an attestation is permissionless: the signature binds it to this address, so anyone can relay it and nobody else can
+        use it. Borrowing is not: only the holder of this address&apos;s key can borrow against it.
+      </p>
     </Card>
   )
 }

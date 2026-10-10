@@ -1,10 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Suspense, useState } from 'react'
 import { parseEther } from 'viem'
-import { useAccount } from 'wagmi'
+import { useViewedWallet } from '@/hooks/useViewedWallet'
+import { getScore } from '@/lib/attestor'
 import { useTenorState } from '@/hooks/useTenorState'
 import { TERMS, TIERS, type Tier } from '@/lib/tiers'
-import { pct, tokens, usd } from '@/lib/format'
+import { pct, shortAddr, tokens, usd } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardTitle, Label } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
@@ -24,15 +26,33 @@ function terms(tier: Tier, collateral: bigint, price: bigint) {
 }
 
 export default function ComparePage() {
-  const { address } = useAccount()
+  return (
+    <Suspense fallback={<Card className="h-64" />}>
+      <Compare />
+    </Suspense>
+  )
+}
+
+function Compare() {
+  const { wallet: address, viewing } = useViewedWallet()
   const s = useTenorState(address)
+  // Read-only view: the tier comes from the live score for that address (its
+  // on-chain score may have expired; it cannot borrow from here anyway).
+  const live = useQuery({
+    queryKey: ['score', address],
+    queryFn: () => getScore(address!),
+    enabled: viewing && Boolean(address),
+    staleTime: 60_000,
+    retry: false,
+  })
+  const liveTier = live.data?.state === 'SCORED' ? live.data.tier : undefined
   // Default: 800 tCOLL. At the $2.00 mock price that is $1,600, below the level
   // where FLOOR's 1,000 tUSD wallet cap binds, so the difference is pure LTV.
   const [amount, setAmount] = useState(800)
   const [pick, setPick] = useState<Tier>('A')
 
   const price = s.prices.coll?.price
-  const walletTier = s.effectiveTier
+  const walletTier = viewing ? liveTier : s.effectiveTier
   const scored = walletTier !== undefined && walletTier !== 'FLOOR'
   const left: Tier = scored ? walletTier : pick
   const collateral = parseEther(String(amount))
@@ -44,7 +64,11 @@ export default function ComparePage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-grotesk text-3xl font-bold">Same collateral. Same rate. More credit.</h1>
-        <p className="mt-1 text-muted">Identical collateral posted by a scored wallet and by an unscored one.</p>
+        <p className="mt-1 text-muted">
+          {viewing
+            ? 'The same hypothetical collateral, priced at this address’s live tier and at floor terms. It has posted nothing on Tenor.'
+            : 'Identical collateral posted by a scored wallet and by an unscored one.'}
+        </p>
       </div>
 
       <Card className="flex items-center gap-8">
@@ -71,10 +95,10 @@ export default function ComparePage() {
 
       <div className="grid grid-cols-2 gap-6">
         <Side
-          title={scored ? 'Your wallet' : `A tier-${left} wallet`}
+          title={scored ? (viewing && address ? `Real borrower ${shortAddr(address)}` : 'Your wallet') : `A tier-${left} wallet`}
           badge={
             scored ? (
-              <Badge tone="accent">tier {left} (from your on-chain score)</Badge>
+              <Badge tone="accent">{viewing ? `tier ${left} (live score, ${live.data?.state === 'SCORED' ? live.data.tenorScore : ''})` : `tier ${left} (from your on-chain score)`}</Badge>
             ) : (
               <span className="flex items-center gap-2">
                 <Badge tone="neutral">illustration</Badge>

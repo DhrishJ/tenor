@@ -50,7 +50,8 @@ interface WalletQuery {
 function Loop({ wallet }: { wallet: Address }) {
   const data = useQuery({
     queryKey: ['loop', wallet],
-    refetchInterval: 5_000,
+    // History only, and Envio's free plan allows 100 queries/min across all visitors.
+    refetchInterval: 30_000,
     queryFn: () =>
       gql<WalletQuery>(
         `query ($id: String!) {
@@ -203,7 +204,8 @@ interface FeedQuery {
 function Feed() {
   const data = useQuery({
     queryKey: ['feed'],
-    refetchInterval: 5_000,
+    // History only, and Envio's free plan allows 100 queries/min across all visitors.
+    refetchInterval: 30_000,
     queryFn: () =>
       gql<FeedQuery>(`{
         LiquidationEvent(order_by: { blockNumber: desc }, limit: 25) {

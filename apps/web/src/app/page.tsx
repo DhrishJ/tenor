@@ -1,16 +1,26 @@
 'use client'
 import { useQuery } from '@tanstack/react-query'
-import { useAccount } from 'wagmi'
+import { Suspense } from 'react'
 import { getScore } from '@/lib/attestor'
 import { explainError } from '@/lib/errors'
 import { useTenorState } from '@/hooks/useTenorState'
-import { AttestPanel } from '@/components/score/AttestPanel'
+import { AttestPanel, ViewOnlyAttestation } from '@/components/score/AttestPanel'
+import { useViewedWallet } from '@/hooks/useViewedWallet'
+import { shortAddr } from '@/lib/format'
 import { Chains, Itemization, NotScored, TierTerms } from '@/components/score/Breakdown'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardTitle, Label } from '@/components/ui/card'
 
 export default function ScorePage() {
-  const { address } = useAccount()
+  return (
+    <Suspense fallback={<Card className="h-64" />}>
+      <Score />
+    </Suspense>
+  )
+}
+
+function Score() {
+  const { wallet: address, viewing } = useViewedWallet()
   const state = useTenorState(address)
   const score = useQuery({
     queryKey: ['score', address],
@@ -23,11 +33,23 @@ export default function ScorePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-grotesk text-3xl font-bold">Your credit, portable to Monad</h1>
-        <p className="mt-1 max-w-3xl text-muted">
-          Tenor reads your Aave and Compound borrowing history from other chains, scores it with ChainScore, and lets you post less
-          collateral for the same loan. The score changes how much you lock up, not what you pay.
-        </p>
+        {viewing && address ? (
+          <>
+            <h1 className="font-grotesk text-3xl font-bold">Credit view: {shortAddr(address)}</h1>
+            <p className="mt-1 max-w-3xl text-muted">
+              A real borrower&apos;s address, scored live from its public Aave and Compound history on other chains. Read-only: this page
+              does not act for it.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="font-grotesk text-3xl font-bold">Your credit, portable to Monad</h1>
+            <p className="mt-1 max-w-3xl text-muted">
+              Tenor reads your Aave and Compound borrowing history from other chains, scores it with ChainScore, and lets you post less
+              collateral for the same loan. The score changes how much you lock up, not what you pay.
+            </p>
+          </>
+        )}
       </div>
 
       {score.data?.notice && (
@@ -68,13 +90,13 @@ export default function ScorePage() {
             <Card>
               <Chains ev={score.data} fixture={Boolean(score.data.notice)} />
             </Card>
-            <AttestPanel wallet={address} state={state} />
+            {viewing ? <ViewOnlyAttestation state={state} /> : <AttestPanel wallet={address} state={state} />}
           </div>
         </div>
       ) : score.data ? (
         <div className="grid grid-cols-[1.1fr_1fr] gap-6">
           <NotScored ev={score.data} />
-          <AttestPanel wallet={address} state={state} />
+          {viewing ? <ViewOnlyAttestation state={state} /> : <AttestPanel wallet={address} state={state} />}
         </div>
       ) : null}
     </div>

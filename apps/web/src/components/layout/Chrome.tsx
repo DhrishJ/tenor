@@ -2,10 +2,13 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Suspense } from 'react'
 import { useAccount, useConnect, useSwitchChain } from 'wagmi'
 import { devWallet, tenorChain } from '@/config/network'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { shortAddr } from '@/lib/format'
+import { useViewedWallet, useViewQuery } from '@/hooks/useViewedWallet'
 
 /** Persistent, on every page. */
 export function Banner() {
@@ -24,8 +27,42 @@ const NAV = [
   { href: '/activity', label: 'Activity' },
 ]
 
-export function Nav() {
+/** Read-only view of an address the viewer does not control (P5-O1). Never reads as ownership. */
+export function ViewingBanner() {
+  return (
+    <Suspense fallback={null}>
+      <ViewingBannerInner />
+    </Suspense>
+  )
+}
+
+function ViewingBannerInner() {
+  const { wallet, viewing } = useViewedWallet()
   const path = usePathname()
+  if (!viewing || !wallet) return null
+  return (
+    <div className="border-b border-accent/40 bg-accent/10 px-6 py-2 text-center text-sm">
+      <b>Read-only view of {shortAddr(wallet)}</b>, a real borrower&apos;s public address. You are not this wallet and Tenor cannot
+      act for it: borrowing is disabled here. Anyone can request and relay this address&apos;s attestation.{' '}
+      <Link href={path} className="text-accent underline">
+        Leave view
+      </Link>
+    </div>
+  )
+}
+
+export function Nav() {
+  return (
+    <Suspense fallback={<header className="h-14 border-b border-border" />}>
+      <NavInner />
+    </Suspense>
+  )
+}
+
+function NavInner() {
+  const path = usePathname()
+  const { viewing } = useViewedWallet()
+  const viewQuery = useViewQuery()
   const { connectors, connect } = useConnect()
   const { isConnected } = useAccount()
   const dev = connectors.find((c) => c.type === 'mock')
@@ -39,7 +76,7 @@ export function Nav() {
           {NAV.map((n) => (
             <Link
               key={n.href}
-              href={n.href}
+              href={n.href === '/market' ? n.href : n.href + viewQuery}
               className={cn('rounded-md px-3 py-1.5 text-sm', path === n.href ? 'bg-border/60 text-text' : 'text-muted hover:text-text')}
             >
               {n.label}
@@ -53,7 +90,13 @@ export function Nav() {
             Dev wallet (local anvil)
           </Button>
         )}
-        <ConnectButton chainStatus="icon" showBalance={false} />
+        {viewing ? (
+          <Button variant="outline" size="sm" disabled title="Leave the read-only view to connect a wallet">
+            Read-only view: wallet connection disabled
+          </Button>
+        ) : (
+          <ConnectButton chainStatus="icon" showBalance={false} />
+        )}
       </div>
     </header>
   )
