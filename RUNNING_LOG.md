@@ -372,3 +372,25 @@ extensions). Covered in the testnet rehearsal.
     will too.
 - **Also fixed:** the dev-wallet button rendered on a testnet build made
   with a local `.env.local`. It's now impossible off chain 31337.
+- **Web on Vercel:** `https://tenor-teal-seven.vercel.app`.
+  - Project root `apps/web`, Next.js, the install command from
+    `vercel.json`. Built first try on Vercel.
+  - All pages 200 and public (no Vercel login).
+  - **Production points at production:** the shipped JS bundles contain
+    the Railway attestor URL, the hosted indexer URL, the Monad RPC and
+    all five rehearsal addresses from `deployments/10143.json`. No
+    localhost. The only `31337` strings are the dev-wallet guard and
+    RainbowKit's chain-icon list.
+  - Vercel's import page shows "agent prompt" text telling an AI to
+    restructure the repo into services. Ignored: page content, not the
+    user's instruction.
+- **Attestor CORS:** `CORS_ORIGINS=https://tenor-teal-seven.vercel.app`
+  (the temporary localhost value is removed). Preflight checked: Vercel
+  origin allowed, localhost refused.
+- **Live:** `/?wallet=0x033B…dCbF` on Vercel renders the read-only view,
+  850, tier A, from the hosted attestor.
+- **Network filter:** gateway 10.0.0.1 and DNS 75.75.75.75 /
+  2001:558:feed::1 are Comcast Xfinity defaults. No filtering software or
+  system extension on the Mac. safebrowse.io is most likely xFi Advanced
+  Security. The user must change it; I don't alter network or security
+  filtering.

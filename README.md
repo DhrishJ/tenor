@@ -17,9 +17,12 @@ is in this repository (`INVENTORY.md` records what exists there;
 `PROVENANCE.md`, due before submission per `PLAN.md`, will give the full
 split).
 
-**Status (2026-09-24):** built and tested locally; testnet deployment in
-progress. Deployed addresses, live URLs and explorer verification go
-here when the final deployment is frozen (OBJECTIONS P4-O7).
+**Status (2026-10-10):** live on Monad testnet (rehearsal deployment).
+- Web: https://tenor-teal-seven.vercel.app
+- Attestor: https://tenor-production-1e06.up.railway.app/health
+
+Final contract addresses and explorer links go here when the final
+deployment is frozen (OBJECTIONS P4-O7).
 
 ## How it works
 
