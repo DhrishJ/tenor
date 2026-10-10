@@ -362,3 +362,13 @@ extensions). Covered in the testnet rehearsal.
   Five recent Ethereum borrowers were refused for a **history mismatch**:
   ChainScore reports no borrowing, the chain shows 16–274 borrows.
   ChainScore's data appears to lag recent borrowing.
+- **Mistake found in the browser:** the rehearsal deployment used
+  `COLL_PRICE_WAD=2000e18` ($2,000 per tCOLL). The UI defaults, the
+  Journey test and the faucet amounts assume $2.00. At $2,000, Compare's
+  default 800 tCOLL is $1.6M, both sides are cap-bound, and the headline
+  difference came from the caps, not the score.
+  - Fixed: the keeper set the rehearsal price to $2.00 (tx `0x4103db77…`).
+  - The README's local deploy now uses `2e18`, and the final deployment
+    will too.
+- **Also fixed:** the dev-wallet button rendered on a testnet build made
+  with a local `.env.local`. It's now impossible off chain 31337.

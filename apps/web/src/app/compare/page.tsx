@@ -73,7 +73,7 @@ function Compare() {
 
       <Card className="flex items-center gap-8">
         <div className="w-80">
-          <Label>Collateral posted by both wallets</Label>
+          <Label>{viewing ? 'Hypothetical collateral, same for both' : 'Collateral posted by both wallets'}</Label>
           <div className="num mt-1 text-xl">{tokens(collateral, 'tCOLL', 0)}</div>
           <Slider className="mt-3" min={100} max={5000} step={50} value={[amount]} onValueChange={([v]) => setAmount(v ?? amount)} />
         </div>
