@@ -35,6 +35,8 @@ const envSchema = z.object({
   KEEPER_INTERVAL_HOURS: z.coerce.number().positive().default(24),
   /** Hosted indexer GraphQL URL; the keeper queries it so it isn't deleted for idleness. */
   INDEXER_URL: z.string().url().optional(),
+  /** TEST SWITCH: "off" disables HyperSync so the Alchemy fallback answers (P5-O13). */
+  HISTORY_PRIMARY: z.enum(['hypersync', 'off']).default('hypersync'),
 })
 
 const deploymentSchema = z.object({
@@ -73,6 +75,7 @@ export interface Config {
   oracleKeeperKey: Hex | undefined
   keeperIntervalMs: number
   indexerUrl: string | undefined
+  historyPrimaryOff: boolean
   oracle: { address: Address; tUSD: Address; tCOLL: Address; maxPriceAge: number } | undefined
 }
 
@@ -107,6 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     oracleKeeperKey: e.ORACLE_KEEPER_PRIVATE_KEY as Hex | undefined,
     keeperIntervalMs: e.KEEPER_INTERVAL_HOURS * 3_600_000,
     indexerUrl: e.INDEXER_URL,
+    historyPrimaryOff: e.HISTORY_PRIMARY === 'off',
     oracle:
       dep.mockPriceOracle && dep.tUSD && dep.tCOLL && dep.maxPriceAge
         ? { address: getAddress(dep.mockPriceOracle), tUSD: getAddress(dep.tUSD), tCOLL: getAddress(dep.tCOLL), maxPriceAge: dep.maxPriceAge }

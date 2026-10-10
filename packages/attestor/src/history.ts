@@ -262,6 +262,16 @@ export class AlchemyHistorySource implements HistoryChecker, ChainHistorySource 
   }
 }
 
+/** TEST SWITCH (HISTORY_PRIMARY=off): stands in for HyperSync and always
+ *  fails, so the Alchemy path can be exercised on the deployed service
+ *  (OBJECTIONS P5-O13). /health reports DEGRADED while it is on. */
+export class DisabledHistorySource implements ChainHistorySource {
+  readonly name = 'hypersync' as const
+  async checkChain(): Promise<ChainHistory> {
+    return { ok: false, error: 'HyperSync disabled by HISTORY_PRIMARY=off (test switch)', attempted: ['hypersync'] }
+  }
+}
+
 // ======================================================================== Fallback
 
 /** HyperSync first; Alchemy for any chain where HyperSync failed. Reports

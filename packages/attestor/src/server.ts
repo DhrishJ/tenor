@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server'
 import { createPublicClient, http } from 'viem'
 import { loadConfig, LOCAL_CHAIN_ID } from './config.js'
 import { LegacyChainScoreClient } from './chainscore.js'
-import { AlchemyHistorySource, FallbackHistoryChecker, HyperSyncHistoryChecker, type HistoryChecker } from './history.js'
+import { AlchemyHistorySource, DisabledHistorySource, FallbackHistoryChecker, HyperSyncHistoryChecker, type HistoryChecker } from './history.js'
 import { createApp, type HealthCheck } from './http.js'
 import { jsonLogger } from './log.js'
 import { ViemRegistryReader } from './registry.js'
@@ -31,10 +31,11 @@ if (fixture && cfg.chainId !== 31337) {
   jsonLogger.error('fixture_on_non_local_chain', { chainId: cfg.chainId })
   process.exit(1)
 }
+const primary = cfg.historyPrimaryOff ? new DisabledHistorySource() : hypersync
 const history: HistoryChecker = fixture
   ? fixture
   : cfg.alchemyKey
-    ? new FallbackHistoryChecker(hypersync, new AlchemyHistorySource({ apiKey: cfg.alchemyKey }))
+    ? new FallbackHistoryChecker(primary, new AlchemyHistorySource({ apiKey: cfg.alchemyKey }))
     : hypersync
 const notice = fixture
   ? `FIXTURE: borrowing history replayed from a recording, not queried live. ${fixture.source} ChainScore scores are live.`
@@ -152,6 +153,12 @@ if (cfg.oracle) {
       keeperIntervalMs: cfg.keeperIntervalMs,
     }),
   )
+}
+if (cfg.historyPrimaryOff) {
+  health.push({
+    name: 'history-primary',
+    check: async () => ({ ok: false, detail: 'DEGRADED: HyperSync disabled by HISTORY_PRIMARY=off (test switch); Alchemy answers. Remove after the test.' }),
+  })
 }
 health.push({
   name: 'store',
