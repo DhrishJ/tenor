@@ -17,12 +17,23 @@ is in this repository (`INVENTORY.md` records what exists there;
 `PROVENANCE.md`, due before submission per `PLAN.md`, will give the full
 split).
 
-**Status (2026-10-10):** live on Monad testnet (rehearsal deployment).
+**Live on Monad testnet (chain 10143), final deployment 2026-10-11:**
 - Web: https://tenor-teal-seven.vercel.app
 - Attestor: https://tenor-production-1e06.up.railway.app/health
+- Indexer (Envio Cloud, synced via HyperSync):
+  https://indexer.dev.hyperindex.xyz/e5e1f2f/v1/graphql
 
-Final contract addresses and explorer links go here when the final
-deployment is frozen (OBJECTIONS P4-O7).
+| Contract | Address (source verified on Sourcify / MonadVision) |
+|---|---|
+| ScoreRegistry | [`0x6bb8d34336a7c53EAfb677F147B2104c7B741655`](https://testnet.monadvision.com/address/0x6bb8d34336a7c53EAfb677F147B2104c7B741655) |
+| TenorMarket | [`0x128946823E816b7112EF6956Fa02395730b8a298`](https://testnet.monadvision.com/address/0x128946823E816b7112EF6956Fa02395730b8a298) |
+| MockPriceOracle (mock; owner: the oracle keeper key) | [`0x4Bba7f237f2d9EB79B7029Bac0a76C8414f86A50`](https://testnet.monadvision.com/address/0x4Bba7f237f2d9EB79B7029Bac0a76C8414f86A50) |
+| tUSD (mock) | [`0x8f56a4353D507474Fb6926Fa532966172AF7FbCE`](https://testnet.monadvision.com/address/0x8f56a4353D507474Fb6926Fa532966172AF7FbCE) |
+| tCOLL (mock) | [`0x3E42bfd40480D1895e29Fa4d527a0f46f65BEF4d`](https://testnet.monadvision.com/address/0x3E42bfd40480D1895e29Fa4d527a0f46f65BEF4d) |
+
+Deployed from block 70203213 by `scripts/deploy-final.sh`. A
+rehearsal deployment ran first, and the adversarial pass ran there
+(`deployments/10143-rehearsal.json`, `docs/adversarial/`).
 
 ## How it works
 
