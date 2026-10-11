@@ -1,0 +1,3 @@
+# False positive (2026-10-11): an empty ORACLE_KEEPER_PRIVATE_KEY= in the public
+# template, where gitleaks reads the next line (KEEPER_INTERVAL_HOURS=24) as its value.
+
