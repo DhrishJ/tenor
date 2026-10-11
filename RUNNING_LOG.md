@@ -421,3 +421,44 @@ extensions). Covered in the testnet rehearsal.
   - "Max (… always borrowable)" was false for wallets with debt; reworded.
 - **Brief claim corrected:** "maxBorrow + 1 wei fails" isn't the
   contract's boundary.
+
+## 2026-10-11: FINAL deployment (scripted, `scripts/deploy-final.sh`)
+
+| Contract | Address (final) |
+|---|---|
+| ScoreRegistry | `0x6bb8d34336a7c53EAfb677F147B2104c7B741655` |
+| TenorMarket | `0x128946823E816b7112EF6956Fa02395730b8a298` |
+| MockPriceOracle | `0x4Bba7f237f2d9EB79B7029Bac0a76C8414f86A50` (owner: oracle keeper) |
+| tUSD | `0x8f56a4353D507474Fb6926Fa532966172AF7FbCE` |
+| tCOLL | `0x3E42bfd40480D1895e29Fa4d527a0f46f65BEF4d` |
+
+- **Start block 70203213.** Mock collateral at **$2.00**. Seed 100,000 tUSD.
+- The script's preflight, wiring checks and Sourcify verification all
+  passed (5/5 `match`). The rehearsal record is archived as
+  `deployments/10143-rehearsal.json`.
+- **Secret scan:**
+  - the known-secret search over the deploy artifacts: 0 hits;
+  - **gitleaks had not run** at commit time (its binary was in the
+    cleared scratchpad); reinstalled (checksum OK) to `~/.local/bin`;
+  - full-history scan: one false positive (an empty key in
+    `.env.example`), recorded in `.gitleaksignore`; then no leaks.
+- **Envio:** deployment `2c9c880` from the `envio` branch, synced via
+  HyperSync from the new start block. Endpoint
+  `https://indexer.dev.hyperindex.xyz/e5e1f2f/v1/graphql`. "Promote" (a
+  static endpoint) does nothing on the Development plan.
+  - **Two active deployments** use indexing hours in parallel (25/750
+    used). The rehearsal deployment 8937967 must be deleted (asked the
+    user).
+- **Railway:**
+  - Redeployed on the final registry; `INDEXER_URL` points at the new
+    endpoint.
+  - The keeper re-stamped the **final** oracle (tx `0x0bddeebe…` →
+    `0x4bba…6a50`).
+  - `/health` ok.
+- **Demo wallet:** a fresh live evaluation, `0x033B…dCbF` SCORED 850
+  tier A (full verification), relayed to the final registry (tx
+  `0x2706cec0…`). On-chain 850, fresh, tier A. **Expires in 24 h:**
+  relay again before filming.
+- **Vercel:** `NEXT_PUBLIC_INDEXER_URL` still holds the rehearsal endpoint
+  and needs updating plus a redeploy. Blocked mid-edit: the browser tab
+  hung, probably on a "leave site?" dialog.
