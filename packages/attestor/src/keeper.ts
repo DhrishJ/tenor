@@ -186,7 +186,9 @@ export function restampStep(d: {
       const hashes: string[] = []
       for (const asset of d.assets) {
         const [price] = await d.client.readContract({ address: d.oracle, abi: oracleAbi, functionName: 'getPrice', args: [asset] })
-        const hash = await wallet.writeContract({ address: d.oracle, abi: oracleAbi, functionName: 'setPrice', args: [asset, price] })
+        // Headroom over the estimate (see apps/web/src/lib/gas.ts): a plain estimate has run out of gas on testnet.
+        const est = await d.client.estimateContractGas({ address: d.oracle, abi: oracleAbi, functionName: 'setPrice', args: [asset, price], account })
+        const hash = await wallet.writeContract({ address: d.oracle, abi: oracleAbi, functionName: 'setPrice', args: [asset, price], gas: (est * 130n) / 100n + 30_000n })
         const r = await d.client.waitForTransactionReceipt({ hash, timeout: 60_000 })
         if (r.status !== 'success') throw new Error(`setPrice reverted: ${hash}`)
         hashes.push(hash)

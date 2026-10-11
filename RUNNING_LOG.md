@@ -394,3 +394,30 @@ extensions). Covered in the testnet rehearsal.
   system extension on the Mac. safebrowse.io is most likely xFi Advanced
   Security. The user must change it; I don't alter network or security
   filtering.
+
+## 2026-10-11: adversarial pass on the live rehearsal deployment
+
+- **22/22 on-chain checks pass**, plus 7 attestation-service refusal checks
+  (`docs/adversarial/README.md`).
+- First-run results for B (not in the JSON):
+  - B1: tier 0, maxBorrow 1,000 tUSD (txs `0xec6d060d…`, `0x8a0bc0df…`,
+    `0xf664a4a4…`).
+  - B2a: maxBorrow 3 wei under the cap.
+  - B2: cap + 1 wei → `ExceedsWalletCap`.
+  - B3: borrow exactly maxBorrow, tx `0x61821e84…`.
+- **The first run aborted with the market paused** (an out-of-gas
+  withdrawCollateral). I unpaused it by hand (tx `0x2ebb11a4…`).
+- **My first diagnosis cited invalid evidence.** I said "out of gas"
+  because the gas limit equalled gasUsed. Monad receipts report gasUsed =
+  limit for *every* transaction, success included, so that proves nothing.
+  `debug_traceTransaction` on the public RPC then showed a genuine "out of
+  gas" in the final token transfer. I also wrote, as fact, an unverified
+  explanation (interest-accrual paths); it's removed from the code
+  comments.
+- **Fixed in the web app:**
+  - Max/All interest headroom.
+  - 30% gas headroom.
+  - Reverted transactions are no longer shown as success.
+  - "Max (… always borrowable)" was false for wallets with debt; reworded.
+- **Brief claim corrected:** "maxBorrow + 1 wei fails" isn't the
+  contract's boundary.

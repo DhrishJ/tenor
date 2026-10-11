@@ -1,0 +1,83 @@
+{
+ "at": "2026-10-11T20:08:30.231Z",
+ "chainscoreQueried": [
+  "ethereum",
+  "avalanche"
+ ],
+ "result": {
+  "state": "UNAVAILABLE",
+  "reason": "Avalanche: ChainScore unreachable (fetch failed); Ethereum: ChainScore unreachable (fetch failed). Cannot score without every chain this wallet borrowed on. Not a low score.",
+  "chains": [
+   {
+    "chain": "avalanche",
+    "name": "Avalanche",
+    "reason": "Avalanche: ChainScore unreachable (fetch failed)"
+   },
+   {
+    "chain": "ethereum",
+    "name": "Ethereum",
+    "reason": "Ethereum: ChainScore unreachable (fetch failed)"
+   }
+  ],
+  "history": {
+   "verification": "partial",
+   "sources": [
+    {
+     "chain": "ethereum",
+     "name": "Ethereum",
+     "source": "alchemy",
+     "unverified": [
+      "compound"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "arbitrum",
+     "name": "Arbitrum",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "optimism",
+     "name": "Optimism",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "polygon",
+     "name": "Polygon",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "base",
+     "name": "Base",
+     "source": "alchemy",
+     "unverified": [],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "avalanche",
+     "name": "Avalanche",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Avalanche"
+    },
+    {
+     "chain": "scroll",
+     "name": "Scroll",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed; Alchemy fallback does not cover Scroll"
+    }
+   ]
+  }
+ }
+}

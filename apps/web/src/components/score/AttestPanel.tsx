@@ -6,6 +6,7 @@ import { contracts, explorerTx } from '@/config/network'
 import { ScoreRegistryAbi } from '@/generated/abis'
 import { requestAttestation, type AttestResult } from '@/lib/attestor'
 import { explainError } from '@/lib/errors'
+import { assertSuccess, bufferedGas } from '@/lib/gas'
 import { duration, when } from '@/lib/format'
 import { FLOOR_TERMS } from '@/lib/tiers'
 import { useNow } from '@/hooks/useNow'
@@ -120,9 +121,11 @@ export function AttestPanel({ wallet, state }: { wallet: Address; state: TenorSt
     try {
       // Simulate first: a would-be revert gets its specific reason, not a wallet error.
       await client.simulateContract({ address: contracts.registry, abi: ScoreRegistryAbi, functionName: 'submitAttestation', args, account: wallet })
-      const hash = await writeContractAsync({ address: contracts.registry, abi: ScoreRegistryAbi, functionName: 'submitAttestation', args })
+      const call = { address: contracts.registry, abi: ScoreRegistryAbi, functionName: 'submitAttestation', args } as const
+      const gas = await bufferedGas(client, call, wallet)
+      const hash = await writeContractAsync({ ...call, gas })
       setTx(hash)
-      await client.waitForTransactionReceipt({ hash })
+      assertSuccess(await client.waitForTransactionReceipt({ hash }), hash)
       setSigned(undefined)
       setInfo('Submitted. The registry now holds this score.')
       state.refetch()

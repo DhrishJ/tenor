@@ -148,6 +148,13 @@ function Actions({ wallet, s }: { wallet: Address; s: TenorState }) {
   const p = s.position
   const price = s.prices.coll?.price
   const bal = s.balances
+  // Interest accrues every block (0.4 s on Monad), so a limit read now is stale
+  // by the time a transaction lands: maxBorrow's own margin is only a few wei.
+  // Max borrow and All repay keep 10 minutes of interest on the current debt as
+  // headroom (found on testnet 2026-10-11: borrowing exactly maxBorrow with
+  // existing debt reverted ExceedsWalletCap).
+  const headroom = p && p.debt > 0n ? (p.debt * (s.market.borrowRateBps ?? 1_200n) * 600n) / (10_000n * 31_536_000n) + 10n ** 12n : 0n
+  const safeMax = s.maxBorrow !== undefined ? (s.maxBorrow > headroom ? s.maxBorrow - headroom : 0n) : undefined
   // After an approval the same amount carries on to the real action.
   const done = (sent: TxSpec) => {
     if (sent.functionName !== 'approve') setInput('')
@@ -248,18 +255,23 @@ function Actions({ wallet, s }: { wallet: Address; s: TenorState }) {
         />
         <span className="w-16 text-sm text-muted">{action === 'deposit' || action === 'withdraw' ? 'tCOLL' : 'tUSD'}</span>
         {action === 'borrow' && (
-          <Button variant="outline" size="sm" disabled={s.maxBorrow === undefined || s.maxBorrow === 0n} onClick={() => setInput(formatUnits((s.maxBorrow! / 10n ** 12n) * 10n ** 12n, 18))}>
+          <Button variant="outline" size="sm" disabled={!safeMax} onClick={() => setInput(formatUnits((safeMax! / 10n ** 12n) * 10n ** 12n, 18))}>
             Max
           </Button>
         )}
         {action === 'repay' && p && p.debt > 0n && (
-          <Button variant="outline" size="sm" onClick={() => setInput(formatUnits(p.debt, 18))}>
+          <Button variant="outline" size="sm" onClick={() => setInput(formatUnits(((p.debt + headroom) / 10n ** 12n + 1n) * 10n ** 12n, 18))} title="Your debt plus 10 minutes of interest; the contract only takes what is owed">
             All
           </Button>
         )}
       </div>
       <div className="text-xs text-muted">
-        {action === 'borrow' && s.maxBorrow !== undefined && <>Max (from the contract’s maxBorrow, always borrowable): <span className="num">{tokens(s.maxBorrow, 'tUSD', 4)}</span>. </>}
+        {action === 'borrow' && safeMax !== undefined && (
+          <>
+            Max: <span className="num">{tokens(safeMax, 'tUSD', 4)}</span>
+            {headroom > 0n ? ' (the contract’s maxBorrow less 10 minutes of interest on your debt, so it still fits when the transaction lands)' : ' (the contract’s maxBorrow)'}.{' '}
+          </>
+        )}
         Balance: <span className="num">{bal ? (action === 'deposit' || action === 'withdraw' ? tokens(bal.coll, 'tCOLL', 4) : tokens(bal.usd, 'tUSD', 2)) : '—'}</span>
       </div>
       <HfBar current={s.healthFactor} projected={projected} lt={TERMS[tier].ltBps} />

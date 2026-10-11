@@ -4,6 +4,7 @@ import { usePublicClient, useWriteContract } from 'wagmi'
 import type { Abi, Address, Hex } from 'viem'
 import { explorerTx } from '@/config/network'
 import { explainError } from '@/lib/errors'
+import { assertSuccess, bufferedGas } from '@/lib/gas'
 import { Button } from '@/components/ui/button'
 
 export interface TxSpec {
@@ -32,9 +33,10 @@ export function TxFlow({ spec, account, onDone, disabled, emptyLabel = 'Enter an
     try {
       const call = { address: spec.address, abi: spec.abi, functionName: spec.functionName, args: spec.args } as const
       await client.simulateContract({ ...call, account })
-      const hash = await writeContractAsync(call as never)
+      const gas = await bufferedGas(client, call, account)
+      const hash = await writeContractAsync({ ...call, gas } as never)
       setTx(hash)
-      await client.waitForTransactionReceipt({ hash })
+      assertSuccess(await client.waitForTransactionReceipt({ hash }), hash)
       setReview(false)
       onDone(spec)
     } catch (e) {

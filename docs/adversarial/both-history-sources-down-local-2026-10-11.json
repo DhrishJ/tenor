@@ -1,0 +1,113 @@
+{
+ "at": "2026-10-11T20:08:40.747Z",
+ "chainscoreQueried": [],
+ "result": {
+  "state": "UNAVAILABLE",
+  "reason": "History verification unavailable: no borrowing-history source answered (tried HyperSync). Not a low score; try again.",
+  "chains": [
+   {
+    "chain": "ethereum",
+    "name": "Ethereum",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "arbitrum",
+    "name": "Arbitrum",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "optimism",
+    "name": "Optimism",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "polygon",
+    "name": "Polygon",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "base",
+    "name": "Base",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "avalanche",
+    "name": "Avalanche",
+    "reason": "history check failed: fetch failed"
+   },
+   {
+    "chain": "scroll",
+    "name": "Scroll",
+    "reason": "history check failed: fetch failed"
+   }
+  ],
+  "history": {
+   "verification": "partial",
+   "sources": [
+    {
+     "chain": "ethereum",
+     "name": "Ethereum",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "arbitrum",
+     "name": "Arbitrum",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "optimism",
+     "name": "Optimism",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "polygon",
+     "name": "Polygon",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "base",
+     "name": "Base",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "avalanche",
+     "name": "Avalanche",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    },
+    {
+     "chain": "scroll",
+     "name": "Scroll",
+     "source": null,
+     "unverified": [
+      "all"
+     ],
+     "primaryError": "fetch failed"
+    }
+   ]
+  }
+ }
+}

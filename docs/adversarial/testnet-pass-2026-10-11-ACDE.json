@@ -1,0 +1,158 @@
+{
+ "at": "2026-10-11T20:02:20.795Z",
+ "chainId": 10143,
+ "deployment": "rehearsal",
+ "registry": "0x51c9e2F27d8E90A3A1feF894E6e60d1B739Ca098",
+ "market": "0x66DCA766F95c3108b70ba4ee0a8f45E84E514408",
+ "borrower": "0xA641a2AFA2DAE8d61461Ed9c7c515E21D5E08687",
+ "liquidator": "0x6E72f8B236BA91CE1128F396f941dBD4C2FA01BB",
+ "testModelVersion": "0x82fb907fdf8e19493d33709182e5f5b11292e6aa2e8ef0af3fbde9882eaf30ac",
+ "rows": [
+  {
+   "id": "A0",
+   "check": "control: a correctly signed attestation",
+   "expected": "accepted",
+   "observed": "accepted (simulation)",
+   "pass": true
+  },
+  {
+   "id": "A1",
+   "check": "expired attestation",
+   "expected": "AttestationExpired",
+   "observed": "AttestationExpired",
+   "pass": true
+  },
+  {
+   "id": "A2",
+   "check": "replayed nonce (0x0A1187…, nonce 0 already used)",
+   "expected": "InvalidNonce",
+   "observed": "InvalidNonce",
+   "pass": true
+  },
+  {
+   "id": "A3",
+   "check": "signed by an unauthorized key",
+   "expected": "InvalidSigner",
+   "observed": "InvalidSigner",
+   "pass": true
+  },
+  {
+   "id": "A4",
+   "check": "signed for the wrong chain id (1)",
+   "expected": "InvalidSigner",
+   "observed": "InvalidSigner",
+   "pass": true
+  },
+  {
+   "id": "A5",
+   "check": "signed for the wrong verifying contract (the market)",
+   "expected": "InvalidSigner",
+   "observed": "InvalidSigner",
+   "pass": true
+  },
+  {
+   "id": "A6",
+   "check": "submit deadline passed",
+   "expected": "DeadlinePassed",
+   "observed": "DeadlinePassed",
+   "pass": true
+  },
+  {
+   "id": "A7",
+   "check": "issued in the future (beyond 60 s skew)",
+   "expected": "IssuedInFuture",
+   "observed": "IssuedInFuture",
+   "pass": true
+  },
+  {
+   "id": "A8",
+   "check": "lifetime over the 48 h maximum",
+   "expected": "TtlTooLong",
+   "observed": "TtlTooLong",
+   "pass": true
+  },
+  {
+   "id": "C1",
+   "check": "borrow while paused",
+   "expected": "EnforcedPause",
+   "observed": "EnforcedPause",
+   "pass": true
+  },
+  {
+   "id": "C2",
+   "check": "liquidate while paused",
+   "expected": "EnforcedPause",
+   "observed": "EnforcedPause",
+   "pass": true
+  },
+  {
+   "id": "C3",
+   "check": "repay and withdrawCollateral while paused",
+   "expected": "both succeed",
+   "observed": "both succeeded",
+   "pass": true,
+   "tx": [
+    "0x6848a6ccb27f26a81094fe8dcc9d165560920adc9415949593c2a35594c146e7",
+    "0x5338610262f64fcd2dbbb9fe80f9fc2db0380c8feffe5e5c5d52a8cce7342583",
+    "0x0f89a97625bb616922736f365eb21f125dfd176b5eff3e2d752f64d578d3c941",
+    "0xc6855342a67ff38376b9af6d0386e13d0a06d9dd82ae1d167579d7c8e432b7cf"
+   ]
+  },
+  {
+   "id": "D1",
+   "check": "TEST attestation (score 800) accepted; tier while fresh",
+   "expected": "tier 4 (A)",
+   "observed": "tier 4; maxBorrow now 599.80 tUSD",
+   "pass": true,
+   "tx": [
+    "0x9d4a584b662ab3addeb6de7781c19a60f8667517adc475cc08efac980d5f1876",
+    "0xecb47e7b57dd8a3f1ab3220bcb2763e9354181c21dbad9f8920cc02951af4844"
+   ]
+  },
+  {
+   "id": "D2",
+   "check": "after expiry the same wallet is priced at FLOOR",
+   "expected": "tier 0 (FLOOR)",
+   "observed": "tier 0; maxBorrow 2.9994 tUSD",
+   "pass": true
+  },
+  {
+   "id": "D3",
+   "check": "expired score: borrow above floor terms (100 tUSD)",
+   "expected": "ExceedsWalletCap",
+   "observed": "ExceedsWalletCap",
+   "pass": true
+  },
+  {
+   "id": "D4",
+   "check": "expired score: borrow within floor terms",
+   "expected": "success",
+   "observed": "borrowed 1.4997 tUSD",
+   "pass": true,
+   "tx": [
+    "0x24700c2b53b32807efecac3f2f0aeee4683655517b66ebed1342ba1332819138"
+   ]
+  },
+  {
+   "id": "E1",
+   "check": "mock price $2.00 → $1.40; second wallet liquidates; registry records it",
+   "expected": "HF < 1, liquidation succeeds, liquidationCount 1, score stale",
+   "observed": "HF 0.910 before; debt 998.50; liquidationCount 1, shortfallCount 0, score stale true; price restored to $2.00",
+   "pass": true,
+   "tx": [
+    "0xb3d945c8f0a70b6ba30eb1a9cc40cba4ec580f7a1a1dd061bb1732098ac4da0d",
+    "0x8f875ff5698fa80b0c0949f6494891718f8a2c35032510eaf0256ccd79d8cd4b",
+    "0x0a9119b1ca4b3183cd70bcc92f510c2d8adba350a82d86f338216be9d1e1040e",
+    "0xb359e337e0bfeaa7a48f00f5894f2400fdf436ffe1fc58a50ac2b64cc9d61960",
+    "0xbc7204f4324f88fc8e8f6bfe84bb08a525bc341cad78a38582b33d8f9d9d0fa0"
+   ]
+  },
+  {
+   "id": "E2",
+   "check": "a score computed before the liquidation is refused",
+   "expected": "IssuedBeforeLiquidation",
+   "observed": "IssuedBeforeLiquidation",
+   "pass": true
+  }
+ ]
+}

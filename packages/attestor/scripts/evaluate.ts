@@ -21,7 +21,7 @@ const history: HistoryChecker = process.env.ALCHEMY_API_KEY
   ? new FallbackHistoryChecker(hypersync, new AlchemyHistorySource({ apiKey: process.env.ALCHEMY_API_KEY }))
   : hypersync
 
-const inner = new LegacyChainScoreClient('https://chainscore.dev')
+const inner = new LegacyChainScoreClient(process.env.CHAINSCORE_BASE_URL ?? 'https://chainscore.dev')
 const asked: ChainSlug[] = []
 const chainscore: ChainScoreClient = {
   score: (wallet: Address, chain: ChainSlug) => {
