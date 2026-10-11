@@ -65,9 +65,9 @@ Rules carried from the brief and P5-O1 to O14:
 > never turns missing data into a low score.
 
 **1:30–2:05 · The loop: LIVE, then TEST, then COMPUTED**
-[Market page, the filmed wallet: faucet → deposit 500 tCOLL → borrow 600]
+[Market page, the filmed wallet: faucet → deposit 500 tCOLL → borrow with **Max** (about 600; typing exactly 600 reverts, since maxBorrow sits 3 wei under the limit)]
 > Now a wallet we do control, with no history, so it borrows at floor
-> terms: 600 tUSD against $1,000 of collateral. Real transaction, on the
+> terms: about 600 tUSD against $1,000 of collateral. Real transaction, on the
 > explorer. [click the explorer link]
 
 [terminal: `scripts/demo-loop.sh drop`, then `liquidate <wallet>`; on screen: "MOCK ORACLE"]
@@ -115,8 +115,8 @@ Rules carried from the brief and P5-O1 to O14:
 > the same collateral, because there's no reputation layer.
 
 **What exists**
-> ChainScore is live, with a public API: it scores a wallet's lending
-> history across seven chains. Tenor is the lending market built on it
+> ChainScore is live, with a public API: it scores a wallet, chain by
+> chain, from its on-chain history. Tenor is the lending market built on it
 > during this hackathon. A score sets your loan-to-value and borrowing
 > cap, and liquidations on Tenor feed back into the score.
 
