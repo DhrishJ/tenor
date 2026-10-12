@@ -491,3 +491,22 @@ extensions). Covered in the testnet rehearsal.
     final-deployment data;
   - the bundle has the final registry and Multicall3, no rehearsal
     addresses, no localhost.
+
+## 2026-10-12: demo score kept current for judging (14–27 Oct)
+
+- The keeper gained a relay step:
+  - It checks every 4 h (`KEEPER_INTERVAL_HOURS=4`).
+  - When the demo address's on-chain score has under 8 h left, it runs a
+    fresh live evaluation, bypassing the caches so `issuedAt` advances
+    (ChainScore recomputes per request: two calls 5 s apart gave
+    different timestamps), and relays it only if SCORED. Otherwise
+    `/health` reports DEGRADED.
+- The oracle re-stamp is now conditional (prices over 12 h old).
+- The keeper was funded with +1 MON (tx `0x9b4e45ec…`; balance 1.22 MON).
+- **First run on Railway (19:02 UTC):**
+  - relayed 850, tx `0x2bec4ace…`;
+  - new expiry 1791918121, about 24 h ahead;
+  - re-stamped both prices;
+  - pinged the indexer;
+  - `/health` ok.
+- Disclosed in the README.

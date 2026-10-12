@@ -31,6 +31,13 @@ split).
 | tUSD (mock) | [`0x8f56a4353D507474Fb6926Fa532966172AF7FbCE`](https://testnet.monadvision.com/address/0x8f56a4353D507474Fb6926Fa532966172AF7FbCE) |
 | tCOLL (mock) | [`0x3E42bfd40480D1895e29Fa4d527a0f46f65BEF4d`](https://testnet.monadvision.com/address/0x3E42bfd40480D1895e29Fa4d527a0f46f65BEF4d) |
 
+**The demo address** `0x033B…dCbF` is a real borrower's public address,
+not ours. Its attestation is relayed by Tenor's keeper whenever the
+on-chain score is close to expiry. Each relay is a fresh live evaluation
+(ChainScore plus the independent history check), and nothing is relayed
+unless that evaluation is SCORED. Anyone can relay an attestation; only the
+key holder can borrow against it.
+
 Deployed from block 70203213 by `scripts/deploy-final.sh`. A
 rehearsal deployment ran first, and the adversarial pass ran there
 (`deployments/10143-rehearsal.json`, `docs/adversarial/`).
