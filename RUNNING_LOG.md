@@ -462,3 +462,32 @@ extensions). Covered in the testnet rehearsal.
 - **Vercel:** `NEXT_PUBLIC_INDEXER_URL` still holds the rehearsal endpoint
   and needs updating plus a redeploy. Blocked mid-edit: the browser tab
   hung, probably on a "leave site?" dialog.
+
+## 2026-10-11 evening: redesign live
+
+- **Restyled** in ChainScore's visual language, with Aave-style market and
+  position dashboards. Built on branch `redesign`, reviewed on a Vercel
+  preview, fast-forwarded to `main` at the user's go-ahead.
+- **Data fix:** the public Monad RPC answered the site's per-read
+  requests with HTTP 429, so the Market page showed "—". Multicall3
+  (canonical address, checked deployed on 10143) and JSON-RPC batching
+  fixed it.
+- **Same-origin proxy** (`/proxy/attestor`, `/proxy/indexer`, Next.js
+  rewrites):
+  - no CORS dependency;
+  - the indexer is reachable from the Xfinity-filtered home network.
+    Verified in the browser on the live site, so filming no longer needs
+    the hotspot.
+- **Copy fixes:**
+  - Compare's rate explainer now carries the shortfall condition
+    (P5-O8).
+  - Numbers moved from monospace to Inter tabular figures.
+- **Incident:** while I was editing a Railway variable, keystrokes
+  reached Railway's canvas shortcuts and staged two blank function
+  services. Discarded before any deploy; the attestor was untouched.
+- **Production checked:**
+  - all pages 200;
+  - the proxy to the attestor 200, and the proxy to the indexer returns
+    final-deployment data;
+  - the bundle has the final registry and Multicall3, no rehearsal
+    addresses, no localhost.
