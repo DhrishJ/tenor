@@ -11,7 +11,7 @@ import { AttestationService } from './service.js'
 import { AttestationSigner } from './signer.js'
 import { MemoryStore, type Store } from './store.js'
 import { PgStore } from './pgStore.js'
-import { Keeper, indexerPingStep, oracleFreshnessCheck, restampStep, type KeeperStep } from './keeper.js'
+import { Keeper, indexerPingStep, oracleFreshnessCheck, relayStep, restampStep, type KeeperStep } from './keeper.js'
 import { FixtureHistoryChecker } from './fixtureHistory.js'
 
 const cfg = loadConfig()
@@ -129,10 +129,26 @@ if (cfg.oracleKeeperKey && cfg.oracle) {
       keeperKey: cfg.oracleKeeperKey,
       oracle: cfg.oracle.address,
       assets: [cfg.oracle.tUSD, cfg.oracle.tCOLL],
+      restampAfterSec: Math.floor(cfg.restampAfterMs / 1000),
     }),
   )
 }
 if (cfg.indexerUrl) keeperSteps.push(indexerPingStep(cfg.indexerUrl))
+if (cfg.oracleKeeperKey && cfg.relayWallets.length) {
+  keeperSteps.push(
+    relayStep({
+      service,
+      client,
+      rpcUrl: cfg.rpcUrl,
+      chainId: cfg.chainId,
+      keeperKey: cfg.oracleKeeperKey,
+      registry: cfg.registry,
+      wallets: cfg.relayWallets,
+      // Relay once less than this is left: with a check every few hours, no gap.
+      refreshBelowSec: Math.floor(cfg.keeperIntervalMs / 1000) * 2,
+    }),
+  )
+}
 if (keeperSteps.length) {
   const keeper = new Keeper({ steps: keeperSteps, store, log: jsonLogger, intervalMs: cfg.keeperIntervalMs })
   health.push(keeper.health())
@@ -152,6 +168,7 @@ if (cfg.oracle) {
       ],
       maxPriceAgeSec: cfg.oracle.maxPriceAge,
       keeperIntervalMs: cfg.keeperIntervalMs,
+      restampAfterMs: cfg.restampAfterMs,
     }),
   )
 }

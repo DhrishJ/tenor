@@ -37,6 +37,10 @@ const envSchema = z.object({
   INDEXER_URL: z.string().url().optional(),
   /** TEST SWITCH: "off" disables HyperSync so the Alchemy fallback answers (P5-O13). */
   HISTORY_PRIMARY: z.enum(['hypersync', 'off']).default('hypersync'),
+  /** Comma-separated demo addresses whose on-chain score the keeper keeps current (fresh live evaluations only). */
+  RELAY_WALLETS: z.string().default(''),
+  /** The keeper re-stamps oracle prices older than this. */
+  RESTAMP_AFTER_HOURS: z.coerce.number().positive().default(12),
 })
 
 const deploymentSchema = z.object({
@@ -76,6 +80,8 @@ export interface Config {
   keeperIntervalMs: number
   indexerUrl: string | undefined
   historyPrimaryOff: boolean
+  relayWallets: Address[]
+  restampAfterMs: number
   oracle: { address: Address; tUSD: Address; tCOLL: Address; maxPriceAge: number } | undefined
 }
 
@@ -111,6 +117,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     keeperIntervalMs: e.KEEPER_INTERVAL_HOURS * 3_600_000,
     indexerUrl: e.INDEXER_URL,
     historyPrimaryOff: e.HISTORY_PRIMARY === 'off',
+    relayWallets: e.RELAY_WALLETS.split(',').map((w) => w.trim()).filter(Boolean).map((w) => getAddress(w)),
+    restampAfterMs: e.RESTAMP_AFTER_HOURS * 3_600_000,
     oracle:
       dep.mockPriceOracle && dep.tUSD && dep.tCOLL && dep.maxPriceAge
         ? { address: getAddress(dep.mockPriceOracle), tUSD: getAddress(dep.tUSD), tCOLL: getAddress(dep.tCOLL), maxPriceAge: dep.maxPriceAge }

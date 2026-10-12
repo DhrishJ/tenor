@@ -1,9 +1,13 @@
 /**
- * Daily keep-alive (OBJECTIONS P4-O3, P4-O13, brief §4):
- *   1. re-stamps the mock oracle's prices (same values) so a judge arriving
- *      days later doesn't hit "price stale";
+ * Keep-alive (OBJECTIONS P4-O3, P4-O13, brief §4), run every few hours:
+ *   1. re-stamps the mock oracle's prices (same values) once they are older
+ *      than a threshold, so a judge arriving days later doesn't hit "price stale";
  *   2. queries the hosted indexer so Envio's free tier doesn't delete it for
- *      being idle.
+ *      being idle;
+ *   3. optionally relays a fresh attestation for configured demo addresses
+ *      when their on-chain score is near expiry: a fresh LIVE evaluation,
+ *      relayed only if it is SCORED (anyone may relay; the signature binds
+ *      the wallet).
  * Signs with its own throwaway ORACLE_KEEPER key, never the deployer's.
  *
  * The last run is persisted in the store, and /health reports DEGRADED when
@@ -132,13 +136,15 @@ export function oracleFreshnessCheck(d: {
   assets: Array<{ symbol: string; address: Address }>
   maxPriceAgeSec: number
   keeperIntervalMs: number
+  /** The keeper only re-stamps prices older than this. */
+  restampAfterMs?: number
   now?: () => number
 }): HealthCheck {
   return {
     name: 'oracle-freshness',
     check: async () => {
       const nowSec = Math.floor((d.now ?? Date.now)() / 1000)
-      const warnAfter = Math.floor((d.keeperIntervalMs + GRACE_MS) / 1000)
+      const warnAfter = Math.floor(((d.restampAfterMs ?? 0) + d.keeperIntervalMs + GRACE_MS) / 1000)
       const parts: string[] = []
       let ok = true
       for (const a of d.assets) {
@@ -167,6 +173,8 @@ export function restampStep(d: {
   keeperKey: Hex
   oracle: Address
   assets: Address[]
+  /** Skip assets whose price is younger than this (saves gas when the keeper runs often). */
+  restampAfterSec?: number
 }): KeeperStep {
   const account = privateKeyToAccount(d.keeperKey)
   const chain = defineChain({
@@ -184,8 +192,14 @@ export function restampStep(d: {
         throw new Error(`keeper ${account.address} is not the oracle owner (${owner})`)
       }
       const hashes: string[] = []
+      let skipped = 0
+      const nowSec = Math.floor(Date.now() / 1000)
       for (const asset of d.assets) {
-        const [price] = await d.client.readContract({ address: d.oracle, abi: oracleAbi, functionName: 'getPrice', args: [asset] })
+        const [price, updatedAt] = await d.client.readContract({ address: d.oracle, abi: oracleAbi, functionName: 'getPrice', args: [asset] })
+        if (d.restampAfterSec && nowSec - Number(updatedAt) < d.restampAfterSec) {
+          skipped++
+          continue
+        }
         // Headroom over the estimate (see apps/web/src/lib/gas.ts): a plain estimate has run out of gas on testnet.
         const est = await d.client.estimateContractGas({ address: d.oracle, abi: oracleAbi, functionName: 'setPrice', args: [asset, price], account })
         const hash = await wallet.writeContract({ address: d.oracle, abi: oracleAbi, functionName: 'setPrice', args: [asset, price], gas: (est * 130n) / 100n + 30_000n })
@@ -193,7 +207,7 @@ export function restampStep(d: {
         if (r.status !== 'success') throw new Error(`setPrice reverted: ${hash}`)
         hashes.push(hash)
       }
-      return `re-stamped ${d.assets.length} prices: ${hashes.join(', ')}`
+      return hashes.length ? `re-stamped ${hashes.length} price(s): ${hashes.join(', ')}` : `prices fresh, nothing to re-stamp (${skipped} checked)`
     },
   }
 }
@@ -215,3 +229,71 @@ export function indexerPingStep(indexerUrl: string, fetchImpl: typeof fetch = fe
     },
   }
 }
+
+/** Step 3: keep demo addresses' on-chain scores current with fresh LIVE evaluations. */
+export function relayStep(d: {
+  service: { attest: (wallet: Address, requestId: string, opts: { fresh?: boolean }) => Promise<RelayAttestResult> }
+  client: PublicClient
+  rpcUrl: string
+  chainId: number
+  keeperKey: Hex
+  registry: Address
+  wallets: Address[]
+  /** Relay when the on-chain score has less than this left (or none). */
+  refreshBelowSec: number
+}): KeeperStep {
+  const account = privateKeyToAccount(d.keeperKey)
+  const chain = defineChain({
+    id: d.chainId,
+    name: `chain-${d.chainId}`,
+    nativeCurrency: { name: 'native', symbol: 'NATIVE', decimals: 18 },
+    rpcUrls: { default: { http: [d.rpcUrl] } },
+  })
+  const wallet = createWalletClient({ account, chain, transport: http(d.rpcUrl) })
+  return {
+    name: 'demo-relay',
+    run: async () => {
+      const notes: string[] = []
+      let failed: string | undefined
+      for (const w of d.wallets) {
+        const [score, , expiresAt, isStale] = await d.client.readContract({ address: d.registry, abi: registryScoreAbi, functionName: 'getScore', args: [w] })
+        const left = Number(expiresAt) - Math.floor(Date.now() / 1000)
+        if (score > 0 && !isStale && left > d.refreshBelowSec) {
+          notes.push(`${w.slice(0, 8)}… fresh (${Math.round(left / 3600)} h left)`)
+          continue
+        }
+        const r = await d.service.attest(w, 'keeper-relay', { fresh: true })
+        if (r.state !== 'SCORED') {
+          failed = `${w.slice(0, 8)}… not relayed: live evaluation is ${r.state}`
+          notes.push(failed)
+          continue
+        }
+        if (r.alreadyOnChain || !r.attestation || !r.signature) {
+          notes.push(`${w.slice(0, 8)}… already current`)
+          continue
+        }
+        const a = r.attestation
+        const args = [
+          { wallet: a.wallet, score: a.score, issuedAt: BigInt(a.issuedAt), expiresAt: BigInt(a.expiresAt), deadline: BigInt(a.deadline), nonce: BigInt(a.nonce), modelVersion: a.modelVersion },
+          r.signature,
+        ] as const
+        const est = await d.client.estimateContractGas({ address: d.registry, abi: registrySubmitAbi, functionName: 'submitAttestation', args, account })
+        const hash = await wallet.writeContract({ address: d.registry, abi: registrySubmitAbi, functionName: 'submitAttestation', args, gas: (est * 130n) / 100n + 30_000n })
+        const rec = await d.client.waitForTransactionReceipt({ hash, timeout: 60_000 })
+        if (rec.status !== 'success') throw new Error(`submitAttestation reverted: ${hash}`)
+        notes.push(`${w.slice(0, 8)}… relayed ${a.score} (${hash})`)
+      }
+      if (failed) throw new Error(notes.join('; '))
+      return notes.join('; ')
+    },
+  }
+}
+
+export type RelayAttestResult =
+  | { state: 'SCORED'; alreadyOnChain: boolean; signature: Hex | null; attestation: { wallet: Address; score: number; issuedAt: string; expiresAt: string; deadline: string; nonce: string; modelVersion: Hex } | null }
+  | { state: 'INSUFFICIENT_HISTORY' | 'UNAVAILABLE' }
+
+const registryScoreAbi = parseAbi(['function getScore(address wallet) view returns (uint16 score, uint64 issuedAt, uint64 expiresAt, bool isStale)'])
+const registrySubmitAbi = parseAbi([
+  'function submitAttestation((address wallet, uint16 score, uint64 issuedAt, uint64 expiresAt, uint64 deadline, uint256 nonce, bytes32 modelVersion) a, bytes signature)',
+])

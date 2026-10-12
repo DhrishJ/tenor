@@ -139,14 +139,16 @@ export class AttestationService {
 
   /** Evaluate, then sign if SCORED. Serialized per wallet within this process;
    *  the store's reservation makes it safe across processes. */
-  attest(wallet: Address, requestId: string): Promise<AttestResult> {
-    return this.withWalletLock(wallet, () => this.attestInner(wallet, requestId))
+  /** `fresh`: skip the score and history caches (the keeper's relay uses it,
+   *  since a cached ChainScore result would carry the same issuedAt). */
+  attest(wallet: Address, requestId: string, opts: { fresh?: boolean } = {}): Promise<AttestResult> {
+    return this.withWalletLock(wallet, () => this.attestInner(wallet, requestId, opts.fresh ?? false))
   }
 
   // ------------------------------------------------------------------ inner
 
-  private async attestInner(wallet: Address, requestId: string): Promise<AttestResult> {
-    let ev = await this.evaluateInner(wallet, false)
+  private async attestInner(wallet: Address, requestId: string, fresh: boolean): Promise<AttestResult> {
+    let ev = await this.evaluateInner(wallet, fresh)
     if (ev.state !== 'SCORED') {
       await this.logRefusal(ev, wallet, requestId, 'attest')
       return ev

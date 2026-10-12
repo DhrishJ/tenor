@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Address, PublicClient } from 'viem'
-import { Keeper, indexerPingStep, oracleFreshnessCheck } from '../src/keeper.js'
+import { Keeper, indexerPingStep, oracleFreshnessCheck, relayStep } from '../src/keeper.js'
 import { MemoryStore } from '../src/store.js'
 import { silentLogger, type Logger } from '../src/log.js'
 
@@ -109,5 +109,34 @@ describe('indexerPingStep', () => {
   it('passes when data comes back', async () => {
     const f = (async () => new Response(JSON.stringify({ data: { MarketTotals: [{ id: 'market' }] } }))) as typeof fetch
     expect(await indexerPingStep('http://x', f).run()).toBe('indexer answered (MarketTotals rows: 1)')
+  })
+})
+
+describe('relayStep (demo address keep-fresh)', () => {
+  const W = '0x033BD44b29375c02D07d8313A90EaaE94337dCbF' as Address
+  const reg = '0x0000000000000000000000000000000000000003' as Address
+  const key = ('0x' + '11'.repeat(32)) as `0x${string}`
+  const now = Math.floor(Date.now() / 1000)
+  const client = (expiresAt: number, isStale = false) =>
+    ({ readContract: async () => [850, BigInt(now - 100), BigInt(expiresAt), isStale] }) as unknown as PublicClient
+  const step = (c: PublicClient, attest: (w: Address) => Promise<never | object>) =>
+    relayStep({ service: { attest: attest as never }, client: c, rpcUrl: 'http://x', chainId: 10143, keeperKey: key, registry: reg, wallets: [W], refreshBelowSec: 8 * 3600 })
+
+  it('leaves a fresh score alone and does not evaluate', async () => {
+    let called = false
+    const out = await step(client(now + 20 * 3600), async () => { called = true; return {} }).run()
+    expect(called).toBe(false)
+    expect(out).toMatch(/fresh \(20 h left\)/)
+  })
+
+  it('fails loudly when the live evaluation is no longer SCORED', async () => {
+    await expect(step(client(now + 3600), async () => ({ state: 'UNAVAILABLE' })).run()).rejects.toThrow(/not relayed: live evaluation is UNAVAILABLE/)
+  })
+
+  it('asks for a fresh (uncached) evaluation and does not resubmit an identical score', async () => {
+    let opts: unknown
+    const out = await step(client(now - 10, true), async (_w: Address, _r?: string, o?: unknown) => { opts = o; return { state: 'SCORED', alreadyOnChain: true, attestation: null, signature: null } }).run()
+    expect(opts).toEqual({ fresh: true })
+    expect(out).toMatch(/already current/)
   })
 })
