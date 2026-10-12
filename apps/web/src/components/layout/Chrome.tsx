@@ -38,7 +38,7 @@ function ViewingBannerInner() {
       <span className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
         <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Read-only view
       </span>
-      <b className="font-mono">{shortAddr(wallet)}</b> is a real borrower&apos;s public address. You are not this wallet and Tenor cannot act for it:
+      <b>{shortAddr(wallet)}</b> is a real borrower&apos;s public address. You are not this wallet and Tenor cannot act for it:
       borrowing is disabled here. Anyone can request and relay this address&apos;s attestation.{' '}
       <Link href={path} className="font-medium text-accent underline underline-offset-2">
         Leave view

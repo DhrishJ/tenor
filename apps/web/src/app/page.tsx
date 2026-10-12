@@ -42,7 +42,7 @@ function Score() {
   return (
     <div className="space-y-8">
       {viewing ? (
-        <PageHeader eyebrow="Live score, read-only view" title={<>Credit view: <span className="font-mono">{shortAddr(address)}</span></>}>
+        <PageHeader eyebrow="Live score, read-only view" title={<>Credit view: {shortAddr(address)}</>}>
           A real borrower&apos;s address, scored live from its public Aave and Compound history on other chains. Read-only: this page does not
           act for it.
         </PageHeader>

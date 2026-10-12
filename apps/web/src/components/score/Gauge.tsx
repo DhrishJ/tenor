@@ -27,7 +27,7 @@ export function Gauge({ score, label, sub }: { score: number; label?: string; su
         <text x="222" y="148" className="fill-slate-400" fontSize="10">850</text>
       </svg>
       <div className="absolute inset-x-0 top-[44%] text-center">
-        <div className="num text-5xl font-semibold tracking-tight text-text">{score}</div>
+        <div className="font-grotesk text-6xl font-bold tracking-tight text-text">{score}</div>
         {label && <div className="mt-1 text-sm font-medium text-muted">{label}</div>}
         {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
       </div>
