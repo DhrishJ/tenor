@@ -10,7 +10,8 @@ import { gql, type LiquidationRow, type WalletEventRow } from '@/lib/indexer'
 import { TERMS, scoreToTier, type Tier } from '@/lib/tiers'
 import { pct, shortAddr, tokens, usd, when } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardTitle, Label } from '@/components/ui/card'
+import { Card, CardTitle, Label, PageHeader } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 const WAD = 10n ** 18n
 
@@ -29,14 +30,15 @@ function Activity() {
   const wallet = (q && isAddress(q) ? q : address) as Address | undefined
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-grotesk text-3xl font-bold">Activity</h1>
-        <p className="mt-1 text-muted">
-          History from the Envio indexer. Every Tenor liquidation is recorded on-chain against the wallet, together with the terms it
-          happened under.
-        </p>
-      </div>
-      {wallet ? <Loop wallet={wallet} /> : <Card className="h-32 text-muted">Connect a wallet, or open /activity?wallet=0x…, to see its loop.</Card>}
+      <PageHeader eyebrow="Indexed by Envio HyperIndex" title="Activity">
+        Every Tenor liquidation is recorded on-chain against the wallet, together with the terms it happened under, and it feeds back into
+        that wallet&apos;s next score.
+      </PageHeader>
+      {wallet ? (
+        <Loop wallet={wallet} />
+      ) : (
+        <Card className="flex h-32 items-center justify-center text-sm text-muted">Connect a wallet, or open /activity?wallet=0x…, to see its timeline and loop.</Card>
+      )}
       <Feed />
     </div>
   )
@@ -97,11 +99,14 @@ function Loop({ wallet }: { wallet: Address }) {
         {events.length === 0 ? (
           <p className="text-sm text-muted">No Tenor activity for this wallet yet.</p>
         ) : (
-          <ol className="space-y-2">
+          <ol className="relative space-y-1 before:absolute before:bottom-2 before:left-[7px] before:top-2 before:w-px before:bg-border">
             {events.map((e) => (
-              <li key={e.id} className="grid grid-cols-[170px_1fr_auto] gap-3 border-t border-border pt-2 text-sm">
-                <span className="text-xs text-muted">{when(BigInt(e.blockTimestamp))}</span>
-                <span>{describe(e)}</span>
+              <li key={e.id} className="relative grid grid-cols-[22px_1fr_auto] items-start gap-3 rounded-lg py-2 pr-2 text-sm hover:bg-subtle">
+                <span className={cn('relative z-10 mt-1 h-[15px] w-[15px] rounded-full border-[3px] border-white shadow', DOT[e.kind] ?? 'bg-slate-400')} />
+                <span>
+                  <span className="block">{describe(e)}</span>
+                  <span className="text-xs text-muted">{when(BigInt(e.blockTimestamp))}</span>
+                </span>
                 <TxLink hash={e.txHash} />
               </li>
             ))}
@@ -131,12 +136,12 @@ function LoopStrip({ before, liq, after, collateral, price }: { before?: WalletE
   return (
     <Card>
       <Label className="mb-3">The feedback loop</Label>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid gap-3 md:grid-cols-4">
         {steps.map((st, i) => (
-          <div key={st.label} className="relative rounded-md border border-border p-3">
-            <Badge tone={st.tone}>{i + 1}</Badge>
+          <div key={st.label} className="relative rounded-xl border border-border bg-subtle/60 p-4">
+            <Badge tone={st.tone} dot>{`step ${i + 1}`}</Badge>
             <div className="mt-2 text-xs text-muted">{st.label}</div>
-            <div className="num mt-0.5 font-semibold">{st.value}</div>
+            <div className="num mt-0.5 text-lg font-semibold">{st.value}</div>
             <div className="mt-0.5 text-xs text-muted">{st.sub}</div>
           </div>
         ))}
@@ -157,6 +162,18 @@ function netCollateral(events: WalletEventRow[]): bigint {
 function borrowPrice(events: WalletEventRow[]): bigint | undefined {
   const b = events.filter((e) => e.kind === 'BORROWED').at(-1)
   return b?.collateralPriceWad ? BigInt(b.collateralPriceWad) : undefined
+}
+
+const DOT: Record<string, string> = {
+  ATTESTED: 'bg-accent',
+  COLLATERAL_IN: 'bg-indigo-500',
+  COLLATERAL_OUT: 'bg-indigo-300',
+  BORROWED: 'bg-emerald-500',
+  REPAID: 'bg-emerald-300',
+  RETIERED: 'bg-slate-400',
+  BAD_DEBT: 'bg-amber-500',
+  LIQUIDATED: 'bg-danger',
+  LIQUIDATION_RECORDED: 'bg-danger',
 }
 
 function describe(e: WalletEventRow): React.ReactNode {

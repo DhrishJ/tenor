@@ -10,7 +10,10 @@ import { healthFactor, pct, tokens, usd, when } from '@/lib/format'
 import { TxFlow, type TxSpec } from '@/components/market/TxFlow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardTitle, Label } from '@/components/ui/card'
+import { Card, CardTitle, Label, PageHeader, Stat } from '@/components/ui/card'
+import { TokenIcon } from '@/components/ui/token'
+import { TierLadder } from '@/components/score/TierLadder'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { cn } from '@/lib/utils'
 
 const WAD = 10n ** 18n
@@ -36,46 +39,150 @@ export default function MarketPage() {
   const { address } = useAccount()
   const s = useTenorState(address)
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <PageHeader eyebrow="Tenor market · Monad testnet" title="Market">
+        Post tCOLL as collateral and borrow tUSD at your tier&apos;s terms. One interest rate for everyone; your score changes how much you
+        can borrow, not what you pay.
+      </PageHeader>
       <MarketHeader s={s} />
       {!address ? (
-        <Card className="h-40 text-muted">Connect a wallet to borrow. Unscored wallets borrow at floor terms; nobody is turned away.</Card>
-      ) : (
-        <div className="grid grid-cols-[1fr_1.2fr] gap-6">
-          <PositionCard s={s} />
-          <Actions wallet={address} s={s} />
+        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <Card className="flex flex-col justify-between gap-6">
+            <div>
+              <CardTitle>Connect a wallet to borrow</CardTitle>
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                Unscored wallets borrow at floor terms (60% max LTV); nobody is turned away. A verified ChainScore history moves you up the
+                ladder. Test tokens come from the faucet once you&apos;re connected.
+              </p>
+            </div>
+            <ConnectButton.Custom>
+              {({ openConnectModal, mounted }) => (
+                <Button size="lg" onClick={openConnectModal} disabled={!mounted} className="w-fit">
+                  Connect wallet
+                </Button>
+              )}
+            </ConnectButton.Custom>
+          </Card>
+          <Card className="p-5">
+            <CardTitle className="mb-3 px-1 text-base">Terms by tier</CardTitle>
+            <TierLadder />
+          </Card>
         </div>
+      ) : (
+        <>
+          <PositionSummary s={s} />
+          <div className="grid gap-6 lg:grid-cols-[1fr_1.15fr]">
+            <PositionCard s={s} />
+            <Actions wallet={address} s={s} />
+          </div>
+          <LiquidateCard wallet={address} s={s} />
+        </>
       )}
-      {address && <LiquidateCard wallet={address} s={s} />}
     </div>
   )
 }
 
 function MarketHeader({ s }: { s: TenorState }) {
   const idle = s.market.totalAssets !== undefined && s.market.totalDebt !== undefined ? s.market.totalAssets - s.market.totalDebt + (s.market.reserves ?? 0n) : undefined
+  const util = s.market.totalAssets && s.market.totalDebt !== undefined && s.market.totalAssets > 0n ? Number((s.market.totalDebt * 10_000n) / s.market.totalAssets) : undefined
   const age = s.prices.coll ? Math.floor(Date.now() / 1000) - Number(s.prices.coll.updatedAt) : undefined
   return (
-    <Card className="flex items-center gap-10">
-      <div>
-        <Label>Borrow rate (every tier)</Label>
-        <div className="num text-xl">{s.market.borrowRateBps !== undefined ? pct(s.market.borrowRateBps, 2) : '—'} APR</div>
+    <Card className="p-0">
+      <div className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
+        <Stat label="Pool liquidity" value={tokens(idle, 'tUSD', 0)} sub="idle tUSD available to borrow" />
+        <Stat label="Total borrowed" value={tokens(s.market.totalDebt, 'tUSD', 0)} sub={util !== undefined ? `${pct(util, 1)} utilization` : ' '} />
+        <Stat label="Borrow APR" value={s.market.borrowRateBps !== undefined ? pct(s.market.borrowRateBps, 2) : '—'} sub="the same for every tier" />
+        <Stat
+          label="tCOLL price"
+          value={s.prices.coll ? usd(s.prices.coll.price) : '—'}
+          sub={
+            <span className="inline-flex items-center gap-1.5">
+              <Badge tone="warning" dot>
+                mock oracle
+              </Badge>
+              {age !== undefined && `set ${Math.round(age / 60)} min ago`}
+            </span>
+          }
+        />
       </div>
-      <div>
-        <Label>Pool liquidity (idle)</Label>
-        <div className="num text-xl">{tokens(idle, 'tUSD', 0)}</div>
+      <div className="border-t border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-[0.08em] text-muted">
+              <th className="px-6 py-3 font-medium">Asset</th>
+              <th className="py-3 font-medium">Role</th>
+              <th className="py-3 font-medium">Price</th>
+              <th className="px-6 py-3 text-right font-medium">Terms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t border-border">
+              <td className="px-6 py-3">
+                <div className="flex items-center gap-3">
+                  <TokenIcon symbol="tCOLL" />
+                  <div>
+                    <div className="font-medium text-text">Tenor Test Collateral</div>
+                    <div className="text-xs text-muted">tCOLL · mock token</div>
+                  </div>
+                </div>
+              </td>
+              <td className="text-muted">Collateral</td>
+              <td className="num">{s.prices.coll ? usd(s.prices.coll.price) : '—'}</td>
+              <td className="px-6 text-right text-muted">Max LTV 60–80% by tier</td>
+            </tr>
+            <tr className="border-t border-border">
+              <td className="px-6 py-3">
+                <div className="flex items-center gap-3">
+                  <TokenIcon symbol="tUSD" />
+                  <div>
+                    <div className="font-medium text-text">Tenor Test USD</div>
+                    <div className="text-xs text-muted">tUSD · mock token</div>
+                  </div>
+                </div>
+              </td>
+              <td className="text-muted">Borrow</td>
+              <td className="num">{s.prices.usd ? usd(s.prices.usd.price) : '—'}</td>
+              <td className="px-6 text-right text-muted">{s.market.borrowRateBps !== undefined ? `${pct(s.market.borrowRateBps, 2)} APR` : '—'}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div>
-        <Label>Borrowed</Label>
-        <div className="num text-xl">{tokens(s.market.totalDebt, 'tUSD', 0)}</div>
-      </div>
-      <div>
-        <Label>tCOLL price</Label>
-        <div className="num text-xl">{s.prices.coll ? usd(s.prices.coll.price) : '—'}</div>
-        <div className="text-xs text-muted">
-          <Badge tone="warning">mock oracle</Badge> set by hand{age !== undefined && `, updated ${Math.round(age / 60)} min ago`}
+      {s.market.paused && (
+        <div className="border-t border-danger/20 bg-danger/[0.05] px-6 py-3 text-sm font-medium text-danger">Market paused: borrowing and liquidation disabled. Repay and withdrawals still work.</div>
+      )}
+    </Card>
+  )
+}
+
+/** Aave-style position summary: what you have, what you owe, how safe it is. */
+function PositionSummary({ s }: { s: TenorState }) {
+  const p = s.position
+  const price = s.prices.coll?.price
+  const collUsd = p && price ? (p.collateral * price) / WAD : undefined
+  const debtUsd = p && s.prices.usd ? (p.debt * s.prices.usd.price) / WAD : undefined
+  const limit = p && s.maxBorrow !== undefined ? p.debt + s.maxBorrow : undefined
+  const used = limit && limit > 0n && p ? Number((p.debt * 10_000n) / limit) : 0
+  const hf = s.healthFactor
+  const hfNum = hf === undefined ? undefined : hf > 10n ** 30n ? Infinity : Number(formatUnits(hf, 18))
+  const hfTone = hfNum === undefined ? 'text-text' : hfNum === Infinity || hfNum >= 1.5 ? 'text-success' : hfNum >= 1.1 ? 'text-warning' : 'text-danger'
+  return (
+    <Card className="grid grid-cols-2 gap-6 md:grid-cols-5">
+      <Stat label="Collateral" value={collUsd !== undefined ? usd(collUsd) : '—'} sub={tokens(p?.collateral, 'tCOLL', 2)} />
+      <Stat label="Debt" value={debtUsd !== undefined ? usd(debtUsd) : '—'} sub={tokens(p?.debt, 'tUSD', 2)} />
+      <Stat
+        label="Health factor"
+        value={s.healthFactorError ? 'price stale' : hfNum === Infinity ? '∞' : healthFactor(hf)}
+        valueClassName={hfTone}
+        sub={hfNum === Infinity ? 'no debt' : 'liquidation below 1.00'}
+      />
+      <div className="min-w-0">
+        <Label>Borrow power used</Label>
+        <div className="num mt-1 text-2xl font-semibold tracking-tight text-text">{pct(used, 0)}</div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-subtle">
+          <div className={cn('h-full rounded-full', used > 9000 ? 'bg-danger' : used > 7000 ? 'bg-amber-500' : 'bg-accent')} style={{ width: `${Math.min(100, used / 100)}%` }} />
         </div>
       </div>
-      {s.market.paused && <Badge tone="danger">market paused: borrowing and liquidation disabled</Badge>}
+      <Stat label="Tier for your next borrow" value={s.effectiveTier ? (s.effectiveTier === 'FLOOR' ? 'Floor' : `Tier ${s.effectiveTier}`) : '—'} sub={s.effectiveTier ? `max LTV ${pct(TERMS[s.effectiveTier].maxLtvBps)}` : undefined} />
     </Card>
   )
 }
@@ -86,14 +193,14 @@ function HfBar({ current, projected, lt }: { current: bigint | undefined; projec
   const p = pos(projected)
   return (
     <div>
-      <div className="relative h-2 rounded-full bg-gradient-to-r from-danger via-warning to-success">
-        <div className="absolute top-[-3px] h-3.5 w-0.5 bg-text" style={{ left: `${100 / 3}%` }} title="Liquidation at 1.00" />
-        {c !== undefined && <div className="absolute top-[-4px] h-4 w-4 -translate-x-1/2 rounded-full border-2 border-text bg-background" style={{ left: `${c}%` }} />}
-        {p !== undefined && <div className="absolute top-[-4px] h-4 w-4 -translate-x-1/2 rounded-full border-2 border-accent bg-accent/40" style={{ left: `${p}%` }} />}
+      <div className="relative h-2.5 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500">
+        <div className="absolute -top-1 h-[18px] w-0.5 rounded bg-text" style={{ left: `${100 / 3}%` }} title="Liquidation at 1.00" />
+        {c !== undefined && <div className="absolute -top-[5px] h-5 w-5 -translate-x-1/2 rounded-full border-[3px] border-white bg-text shadow" style={{ left: `${c}%` }} title="now" />}
+        {p !== undefined && <div className="absolute -top-[5px] h-5 w-5 -translate-x-1/2 rounded-full border-[3px] border-white bg-accent shadow" style={{ left: `${p}%` }} title="after this action" />}
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-muted">
+      <div className="mt-2 flex justify-between text-[11px] text-muted">
         <span>0</span>
-        <span>liquidation at 1.00 (debt = collateral value × {pct(lt)})</span>
+        <span>liquidation at 1.00 (debt = collateral value × {pct(lt)}) · <span className="text-text">●</span> now <span className="text-accent">●</span> after</span>
         <span>3+</span>
       </div>
     </div>
@@ -106,8 +213,11 @@ function PositionCard({ s }: { s: TenorState }) {
   const invalidated = s.score?.isStale && s.liquidation && s.liquidation.liquidationCount > 0 && s.liquidation.lastLiquidatedAt >= s.score.issuedAt
   return (
     <Card className="space-y-4">
-      <CardTitle>Your position</CardTitle>
-      <dl className="grid grid-cols-2 gap-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <CardTitle>Your position</CardTitle>
+        {p && p.debt > 0n ? <Badge tone={p.tier === 'FLOOR' ? 'neutral' : 'accent'} dot>priced at {p.tier === 'FLOOR' ? 'floor' : `tier ${p.tier}`}</Badge> : <Badge>no open debt</Badge>}
+      </div>
+      <dl className="grid grid-cols-2 gap-y-2.5 rounded-xl bg-subtle p-4 text-sm">
         <dt className="text-muted">Collateral</dt>
         <dd className="num text-right">{tokens(p?.collateral, 'tCOLL', 4)}</dd>
         <dt className="text-muted">Debt (incl. accrued interest)</dt>
@@ -233,27 +343,31 @@ function Actions({ wallet, s }: { wallet: Address; s: TenorState }) {
 
   return (
     <Card className="space-y-4">
-      <div className="flex gap-1">
+      <div className="grid grid-cols-4 gap-1 rounded-xl bg-subtle p-1">
         {(['deposit', 'borrow', 'repay', 'withdraw'] as Action[]).map((a) => (
           <button
             key={a}
             onClick={() => { setAction(a); setInput('') }}
-            className={cn('rounded-md px-3 py-1.5 text-sm capitalize', action === a ? 'bg-border/60 text-text' : 'text-muted hover:text-text')}
+            className={cn('rounded-lg px-2 py-2 text-sm font-medium capitalize transition-all', action === a ? 'bg-white text-text shadow-sm' : 'text-muted hover:text-text')}
           >
-            {a === 'deposit' ? 'Deposit collateral' : a === 'withdraw' ? 'Withdraw collateral' : a}
+            {a === 'deposit' ? 'Deposit' : a}
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="text-xs text-muted">
+        {action === 'deposit' ? 'Post tCOLL as collateral.' : action === 'withdraw' ? 'Take tCOLL collateral back.' : action === 'borrow' ? 'Borrow tUSD against your collateral at your tier.' : 'Pay tUSD debt back.'}
+      </div>
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-sm focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
+        <TokenIcon symbol={action === 'deposit' || action === 'withdraw' ? 'tCOLL' : 'tUSD'} />
         <input
-          className="num w-full rounded-md border border-border bg-background px-3 py-2 text-lg outline-none focus:border-accent"
+          className="num w-full bg-transparent text-2xl font-semibold outline-none placeholder:text-slate-300"
           placeholder="0.00"
           inputMode="decimal"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           aria-label="amount"
         />
-        <span className="w-16 text-sm text-muted">{action === 'deposit' || action === 'withdraw' ? 'tCOLL' : 'tUSD'}</span>
+        <span className="text-sm font-medium text-muted">{action === 'deposit' || action === 'withdraw' ? 'tCOLL' : 'tUSD'}</span>
         {action === 'borrow' && (
           <Button variant="outline" size="sm" disabled={!safeMax} onClick={() => setInput(formatUnits((safeMax! / 10n ** 12n) * 10n ** 12n, 18))}>
             Max
@@ -283,10 +397,21 @@ function Actions({ wallet, s }: { wallet: Address; s: TenorState }) {
 
 function Faucets({ wallet, onDone }: { wallet: Address; onDone: () => void }) {
   return (
-    <div className="space-y-2 border-t border-border pt-3 text-xs text-muted">
-      <div>Test tokens (worthless, one claim per hour per token):</div>
-      <TxFlow account={wallet} onDone={onDone} spec={{ label: 'Get 1,000 tCOLL', address: contracts.tCOLL, abi: MockERC20Abi, functionName: 'faucet', args: [], params: [['token', 'Tenor Test Collateral (tCOLL)'], ['amount', '1,000 tCOLL']] }} />
-      <TxFlow account={wallet} onDone={onDone} spec={{ label: 'Get 1,000 tUSD', address: contracts.tUSD, abi: MockERC20Abi, functionName: 'faucet', args: [], params: [['token', 'Tenor Test USD (tUSD)'], ['amount', '1,000 tUSD']] }} />
+    <div className="space-y-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between">
+        <Label>Test tokens</Label>
+        <span className="text-[11px] text-muted">worthless · one claim per hour per token</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-border p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium"><TokenIcon symbol="tCOLL" className="h-6 w-6 text-[10px]" /> tCOLL</div>
+          <TxFlow account={wallet} onDone={onDone} spec={{ label: 'Get 1,000 tCOLL', address: contracts.tCOLL, abi: MockERC20Abi, functionName: 'faucet', args: [], params: [['token', 'Tenor Test Collateral (tCOLL)'], ['amount', '1,000 tCOLL']] }} />
+        </div>
+        <div className="rounded-xl border border-border p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium"><TokenIcon symbol="tUSD" className="h-6 w-6 text-[10px]" /> tUSD</div>
+          <TxFlow account={wallet} onDone={onDone} spec={{ label: 'Get 1,000 tUSD', address: contracts.tUSD, abi: MockERC20Abi, functionName: 'faucet', args: [], params: [['token', 'Tenor Test USD (tUSD)'], ['amount', '1,000 tUSD']] }} />
+        </div>
+      </div>
     </div>
   )
 }
@@ -343,7 +468,7 @@ function LiquidateCard({ wallet, s }: { wallet: Address; s: TenorState }) {
         moves when the mock oracle’s owner sets it.
       </p>
       <input
-        className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:border-accent"
+        className="h-11 w-full rounded-xl border border-border bg-white px-4 font-mono text-sm shadow-sm outline-none focus:border-accent focus:ring-4 focus:ring-accent/10"
         placeholder="0x… wallet address"
         value={target}
         onChange={(e) => setTarget(e.target.value)}

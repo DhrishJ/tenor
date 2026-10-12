@@ -1,6 +1,6 @@
 'use client'
 import '@rainbow-me/rainbowkit/styles.css'
-import { RainbowKitProvider, connectorsForWallets, darkTheme } from '@rainbow-me/rainbowkit'
+import { RainbowKitProvider, connectorsForWallets, lightTheme } from '@rainbow-me/rainbowkit'
 import { injectedWallet, walletConnectWallet } from '@rainbow-me/rainbowkit/wallets'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
@@ -22,7 +22,8 @@ export const wagmiConfig = createConfig({
     // Present only when NEXT_PUBLIC_DEV_WALLET is set; never in a deployed build.
     ...(devWallet ? [mock({ accounts: [devWallet], features: { reconnect: true } })] : []),
   ],
-  transports: { [tenorChain.id]: http() },
+  // Batch JSON-RPC calls too: the public testnet RPC rate-limits bursts.
+  transports: { [tenorChain.id]: http(undefined, { batch: true }) },
   ssr: true,
 })
 
@@ -31,7 +32,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={darkTheme({ accentColor: '#0052FF', borderRadius: 'small' })}>{children}</RainbowKitProvider>
+        <RainbowKitProvider theme={lightTheme({ accentColor: '#0052FF', borderRadius: 'medium', fontStack: 'system' })}>{children}</RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )

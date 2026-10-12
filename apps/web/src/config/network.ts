@@ -26,6 +26,10 @@ export const tenorChain = defineChain({
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrls: { default: { http: [rpcUrl] } },
   ...(explorerUrl ? { blockExplorers: { default: { name: 'Explorer', url: explorerUrl } } } : {}),
+  // Canonical Multicall3 (checked deployed on Monad testnet, 2026-10-11). Without
+  // it every contract read is its own RPC request, and the public RPC answers
+  // the burst with HTTP 429 ("—" on the Market page).
+  ...(chainId === 10143 ? { contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' as Address } } } : {}),
   testnet: true,
 })
 
@@ -37,9 +41,10 @@ export const contracts = {
   tCOLL: getAddress(deployment.tCOLL),
 } satisfies Record<string, Address>
 
+// Same-origin paths, forwarded by next.config.mjs rewrites.
 export const services = {
-  attestor: process.env.NEXT_PUBLIC_ATTESTOR_URL ?? '',
-  indexer: process.env.NEXT_PUBLIC_INDEXER_URL ?? '',
+  attestor: process.env.NEXT_PUBLIC_ATTESTOR_URL ? '/proxy/attestor' : '',
+  indexer: process.env.NEXT_PUBLIC_INDEXER_URL ? '/proxy/indexer' : '',
   indexerDevSecret: process.env.NEXT_PUBLIC_INDEXER_DEV_SECRET ?? '',
 }
 
